@@ -14,7 +14,8 @@ class Recording:
         self.annotations = annotations
 
         self.meta = meta or {}
-        self.meta['id'] = id
+        if 'id' not in self.meta:
+            self.meta['id'] = id
         if frequency is not None:
             self.meta['frequency'] = frequency
 
