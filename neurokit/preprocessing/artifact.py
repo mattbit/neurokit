@@ -15,7 +15,7 @@ def detect_artifacts(recording, **kwargs):
                 'start': start,
                 'end': end,
                 'channel': ch,
-                'description': 'AAD'
+                'description': 'auto detection'
             })
 
     return pd.DataFrame(artifacts, columns=['start', 'end', 'channel', 'description'])
@@ -43,9 +43,8 @@ def detect_signal_artifacts(signal, detectors=['clipped', 'isoelectrical', 'ampl
 
 
 def detect_clipped_signal(signal):
-    hist, edges = np.histogram(
-        signal[~np.isnan(signal)], bins=65536, density=True)
-    bins = (edges[1:] + edges[:-1]) / 2
+    hist, edges = np.histogram(signal[~np.isnan(signal)],
+                               bins=65536, density=True)
 
     mask = np.ones(len(signal), dtype=bool)
     if hist[0] > hist[:50].mean():
@@ -74,8 +73,3 @@ def detect_high_amplitude_signal(signal, low=None, high=None):
     abs_signal = np.abs(signal)
 
     return apply_hysteresis_threshold(abs_signal, low, high)
-
-
-def wavelet_restoration(signal, artifacts=None):
-    if artifacts is None:
-        artifacts = detect_artifacts(signal)
