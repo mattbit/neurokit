@@ -6,15 +6,11 @@ from fractions import Fraction
 from pyedflib import EdfWriter
 
 from .model import Recording
-from ..internal import LoggingContext
 
 
-def read_edf(path):
-    """Read an EDF/EDF+ file"""
+def _recording_from_mne_raw(raw: mne.io.Raw):
     mne.utils.logger.setLevel(logging.WARNING)
 
-    raw = mne.io.read_raw_edf(path, stim_channel=None,
-                              preload=True, verbose=False)
     timestamp, microseconds = raw.info['meas_date']
     initial_time = timestamp * 10**9 + microseconds * 10**3
 
@@ -43,6 +39,14 @@ def read_edf(path):
         annot_list, columns=['start', 'end', 'channel', 'description'])
 
     return Recording(data, meta=meta, annotations=annotations)
+
+
+def read_edf(path):
+    """Read an EDF/EDF+ file"""
+
+    raw = mne.io.read_raw_edf(path, stim_channel=None,
+                              preload=True, verbose=False)
+    return _recording_from_mne_raw(raw)
 
 
 def write_edf(recording, path):
