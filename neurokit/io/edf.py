@@ -49,7 +49,7 @@ def read_edf(path):
     return _recording_from_mne_raw(raw)
 
 
-def write_edf(recording, path):
+def write_edf(recording, path, artifacts=False):
     writer = EdfWriter(str(path), len(recording.channels))
     try:
         duration, samples_per_record = _calc_datarecord_params(
@@ -80,6 +80,8 @@ def write_edf(recording, path):
 
         writer.setDatarecordDuration(duration * 100000)
 
+        writer.set_number_of_annotation_signals(1 + artifacts)
+
         data = recording.data.to_numpy()
         if data.shape[0] % samples_per_record != 0:
             pad = samples_per_record - data.shape[0] % samples_per_record
@@ -98,11 +100,12 @@ def write_edf(recording, path):
             writer.writeAnnotation(onset, duration, item.description)
 
         # Write artifacts as annotations
-        # for item in recording.artifacts.itertuples():
-        #     onset = (item.start - recording.start_date).total_seconds()
-        #     duration = (item.end - item.start).total_seconds()
-        #     description = f'ARTIFACT | {item.channel} | {item.description}'
-        #     writer.writeAnnotation(onset, duration, description)
+        if artifacts:
+            for item in recording.artifacts.itertuples():
+                onset = (item.start - recording.start_date).total_seconds()
+                duration = (item.end - item.start).total_seconds()
+                description = f'ARTIFACT | {item.channel} | {item.description}'
+                writer.writeAnnotation(onset, duration, description)
 
     finally:
         writer.close()
