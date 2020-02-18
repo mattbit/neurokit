@@ -70,15 +70,15 @@ class Recording:
         return Recording(data, self.meta.copy(),
                          annotations=annotations, artifacts=artifacts)
 
-    def to_edf(self, filename):
+    def to_edf(self, filename, **kwargs):
         from neurokit.io.edf import write_edf
 
-        return write_edf(self, filename)
+        return write_edf(self, filename, **kwargs)
 
-    def to_nkr(self, filename):
+    def to_nkr(self, filename, **kwargs):
         from neurokit.io.nk import write_nkr
 
-        return write_nkr(self, filename)
+        return write_nkr(self, filename, **kwargs)
 
     def __len__(self):
         return len(self.data)
@@ -87,7 +87,11 @@ class Recording:
         if not isinstance(key, slice):
             raise Exception('Recording can only be sliced.')
 
-        start, end = pd.to_datetime(key.start), pd.to_datetime(key.stop)
+        try:
+            start = self.start_date + pd.to_timedelta(key.start)
+            end = self.start_date + pd.to_timedelta(key.stop)
+        except ValueError:
+            start, end = pd.to_datetime(key.start), pd.to_datetime(key.stop)
 
         data = self.data.loc[start:end]
         artifacts = _slice_intervals(self.artifacts, start, end)
