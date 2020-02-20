@@ -23,5 +23,8 @@ setuptools.setup(
         'skimage',
         'pywavelets',
         'networkx',
+        'dateparser',
+        'chardet',
+        'unidecode'
     ]
 )

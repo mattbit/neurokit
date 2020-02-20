@@ -37,5 +37,13 @@ freq, time, S = nk.signal.spectrogram(recording, channels=['O1', 'O2'], window=1
 # and plot
 fig = nk.vis.plot_spectrogram(freq, time, S)
 fig.show()
+```
 
+
+## Fixing and anonymizing EDF files (WIP!)
+
+```python
+import neurokit as nk
+
+nk.io.edf.fix_edf('/file/to/fix.edf', '/the/fixed/output.edf', anonymize=True)
 ```

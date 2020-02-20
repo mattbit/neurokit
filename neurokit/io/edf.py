@@ -1,9 +1,15 @@
+import dateparser
+import unidecode
+import chardet
+import shutil
+import re
 import mne
 import logging
 import numpy as np
 import pandas as pd
 from fractions import Fraction
 from pyedflib import EdfWriter
+from pathlib import Path
 
 from .model import Recording
 
@@ -115,3 +121,125 @@ def _calc_datarecord_params(frequency):
     f = Fraction(frequency).limit_denominator(60)
 
     return f.denominator, f.numerator
+
+
+class PatientInfo:
+    _re = re.compile(
+        r'^(?P<code>[^\s]+)\s+(?P<sex>[MFX])\s+(?P<date>(?:\d{2}-\w{3,4}\.?-\d{4}|X))\s+(?P<name>[^\s]+)(?P<fields>(?:\s+[^\s]+)*)', re.UNICODE | re.IGNORECASE)
+
+    def __init__(self, code=None, sex=None, date=None, name=None, *extras):
+        self.code = code
+        self.sex = sex
+        self.date = date
+        self.name = name
+        self.extras = extras
+
+    @classmethod
+    def parse(cls, raw):
+        raw = raw.strip()
+        match = cls._re.match(raw)
+        if not match:
+            return cls(None, None, None, None, *raw.split(' '))
+
+        code = match['code']
+        sex = match['sex'].upper()
+        date = dateparser.parse(match['date'])
+        name = match['name']
+        extras = match['fields'].strip().split()
+
+        return cls(code, sex, date, name, *extras)
+
+    def anonymize(self):
+        self.code = None
+        self.sex = None
+        self.date = None
+        self.name = None
+        self.extras = []
+        return self
+
+    def format(self):
+        fmt_code = self.code or 'X'
+        fmt_sex = self.sex or 'X'
+        fmt_date = self.date.strftime('%d-%b-%Y').upper() if self.date else 'X'
+        fmt_name = self.name or 'X'
+        fmt_extras = ' '.join(self.extras)
+        fmt_info = f'{fmt_code} {fmt_sex} {fmt_date} {fmt_name} {fmt_extras}'
+        return unidecode.unidecode(fmt_info).strip()
+
+
+class RecordingInfo:
+    _re = re.compile(
+        r'^Startdate\s+(?P<date>\d{2}-\w{3,4}\.?-\d{4})(?P<fields>(?:\s+[^\s]+)*)', re.UNICODE | re.IGNORECASE)
+
+    def __init__(self, date, code=None, technician=None, equipment=None, *extras):
+        self.date = date
+        self.code = code
+        self.technician = technician
+        self.equipment = equipment
+        self.extras = extras
+
+    @classmethod
+    def parse(cls, raw):
+        raw = raw.strip()
+        match = cls._re.match(raw)
+        if not match:
+            # @todo: ParseException
+            raise Exception('Invalid recording information')
+
+        date = dateparser.parse(match['date'])
+        fields = match['fields'].strip().split(' ')
+        missing = 3 - len(fields)
+        if missing > 0:
+            fields += [None] * missing
+
+        code = fields[0]
+        technician = fields[1]
+        equipment = fields[2]
+        extras = fields[3:]
+
+        return cls(date, code, technician, equipment, *extras)
+
+    def anonymize(self):
+        self.code = None
+        self.technician = None
+        self.equipment = None
+        self.extras = []
+        return self
+
+    def format(self):
+        fmt_date = self.date.strftime('%d-%b-%Y').upper()
+        fmt_code = self.code or 'X'
+        fmt_technician = self.technician or 'X'
+        fmt_equipment = self.equipment or 'X'
+        fmt_extras = ' '.join(self.extras)
+        fmt_info = f'Startdate {fmt_date} {fmt_code} {fmt_technician} {fmt_equipment} {fmt_extras}'
+        return unidecode.unidecode(fmt_info).strip()
+
+
+def fix_edf(file, dest, anonymize=False):
+    file = Path(file)
+    dest = Path(dest)
+    with file.open('rb') as input:
+        raw_header = input.read(256)
+
+    # Detect the encoding
+    charset = chardet.detect(raw_header)
+    encoding = charset['encoding']
+    if encoding != 'ascii':
+        logging.warning(f'Detected non-standard encoding: {encoding}.')
+
+    # header_size = int(raw_header[184:192].decode(encoding))
+    pat_info = PatientInfo.parse(raw_header[8:88].decode(encoding))
+    rec_info = RecordingInfo.parse(raw_header[88:168].decode(encoding))
+
+    if anonymize:
+        pat_info.anonymize()
+        rec_info.anonymize()
+
+    shutil.copy(file, dest)
+    output = dest.open('rb+')
+
+    output.seek(8)
+    output.write(pat_info.format().encode('ascii').ljust(
+        80)[:80] + rec_info.format().encode('ascii').ljust(80)[:80])
+    output.close()
