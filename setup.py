@@ -20,7 +20,7 @@ setuptools.setup(
         'fastparquet',
         'plotly',
         'pyedflib',
-        'skimage',
+        'scikit-image',
         'pywavelets',
         'networkx',
         'dateparser',
