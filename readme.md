@@ -1,5 +1,7 @@
 # Neurokit
 
+[![Build Status](https://travis-ci.com/mattbit/neurokit.svg?token=zKpBnjBx4d1NEMb7zFbd&branch=master)](https://travis-ci.com/mattbit/neurokit)
+
 A basic toolbox to deal with neurophysiological timeseries.
 
 ---
