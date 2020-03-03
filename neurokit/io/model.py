@@ -88,8 +88,8 @@ class Recording:
             raise Exception('Recording can only be sliced.')
 
         try:
-            start = self.start_date + pd.to_timedelta(key.start)
-            end = self.start_date + pd.to_timedelta(key.stop)
+            start = self.start_date + pd.to_timedelta(key.start) if key.start is not None else None
+            end = self.start_date + pd.to_timedelta(key.stop) if key.stop is not None else None
         except ValueError:
             start, end = pd.to_datetime(key.start), pd.to_datetime(key.stop)
 
