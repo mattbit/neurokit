@@ -57,7 +57,7 @@ def detect_clipped_signal(signal):
 
 
 def detect_isoelectrical_signal(signal, tol=0, opening=10):
-    mask = np.abs(np.diff(signal)) <= tol
+    mask = np.abs(np.nan_to_num(np.diff(signal))) <= tol
     if opening > 0:
         mask = binary_opening(mask, iterations=opening)
 
