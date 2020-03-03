@@ -42,6 +42,22 @@ fig.show()
 ```
 
 
+## Example IO pipeline
+
+```python
+import neurokit as nk
+
+recordings = [nk.io.read_edf('/the/raw/input_1.edf'),
+              nk.io.read_edf('/the/raw/input_2.edf'),
+              nk.io.read_edf('/the/raw/input_3.edf')]
+
+merged_rec, = nk.io.utils.merge_recordings(recordings)
+merged_rec.artifacts = nk.preprocessing.detect_artifacts(merged_rec)
+merged_rec.to_nkr('/the/preprocessed/recording.nkr')
+
+```
+
+
 ## Fixing and anonymizing EDF files (WIP!)
 
 ```python
