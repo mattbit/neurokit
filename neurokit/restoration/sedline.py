@@ -44,16 +44,9 @@ def detect_scale_changes(recording, channels=None, merge_interval=1):
         next_start = intervals[n + 1][0]
         mid_time = start + (end - start) / 2
         window = pd.Timedelta(seconds=5)
-        # print('PRE', max(prev_end, mid_time - window))
-        # print('START', start)
-        # print('END', end)
-        # print('POST', min(next_start, mid_time + window))
-        # print('-----')
 
-        rms_ratio = None
-        std_ratio = None
-        psd_ratio = None
-        det_ratio = None
+        mad_ratio = None
+        wav_ratio = None
 
         if window.total_seconds() > 0:
             pre_vals = data.loc[max(
@@ -61,7 +54,7 @@ def detect_scale_changes(recording, channels=None, merge_interval=1):
             post_vals = data.loc[end:min(
                 next_start, mid_time + window), channels].values
 
-            if min(len(pre_vals), len(post_vals)) >= 2:
+            if min(len(pre_vals), len(post_vals)) >= 30:
                 pre_mask = np.zeros(len(pre_vals), dtype=bool)
                 for ch in range(pre_vals.shape[1]):
                     _raw_rms = np.sqrt((pre_vals[:, ch] ** 2).mean())
@@ -86,53 +79,42 @@ def detect_scale_changes(recording, channels=None, merge_interval=1):
                         post_vals[:, ch], _options)
                 _post_vals = post_vals[~post_mask]
 
-                if min(len(_pre_vals), len(_post_vals)) > 30:
-                    rms_ratio = np.mean(np.sqrt((_pre_vals ** 2).mean(axis=0) /
-                                                (_post_vals ** 2).mean(axis=0)))
-                    std_ratio = np.mean(np.std(_pre_vals, axis=0) /
-                                        np.std(_post_vals, axis=0))
+                # Robust scale estimator: MAD
+                if pre_mask.mean() < 0.5 and post_mask.mean() < 0.5:
+                    mad_ratios = np.median(
+                        np.abs(pre_vals), axis=0) / np.median(np.abs(post_vals), axis=0)
+                    mad_ratio = mad_ratios.mean()
 
                 if min(len(_pre_vals), len(_post_vals)) > 128:
-                    # _, pre_psd = ss.welch(
-                    #     pre_vals, nperseg=256, fs=recording.frequency, axis=0, scaling='spectrum')
-                    # f, post_psd = ss.welch(
-                    #     post_vals, nperseg=256, fs=recording.frequency, axis=0, scaling='spectrum')
-                    # pre_psd = pre_psd[(f > 45.5) & (f < 89)].mean()
-                    # post_psd = post_psd[(f > 45.5) & (f < 89)].mean()
-                    # psd_ratio = np.mean(np.sqrt(pre_psd / post_psd))
-                    _wavelet = 'haar'
+                    _wavelet = 'db4'
                     _, pre_cD, _ = pywt.wavedec(
                         pre_vals, _wavelet, level=2, axis=0)
-                    pre_D = pywt.waverec([None, pre_cD, None], _wavelet, axis=0)
+                    pre_D = pywt.waverec(
+                        [None, pre_cD, None], _wavelet, axis=0)
                     _, post_cD, _ = pywt.wavedec(
                         post_vals, _wavelet, level=2, axis=0)
-                    post_D = pywt.waverec([None, post_cD, None], _wavelet, axis=0)
+                    post_D = pywt.waverec(
+                        [None, post_cD, None], _wavelet, axis=0)
 
                     pre_D = pre_D[:len(pre_vals)]
                     post_D = post_D[:len(post_vals)]
 
-                    det_ratio = np.sqrt(np.mean((pre_D[~pre_mask]**2).mean(
+                    wav_ratio = np.sqrt(np.mean((pre_D[~pre_mask]**2).mean(
                         axis=0) / (post_D[~post_mask]**2).mean(axis=0)))
-
 
         detections.append({
             'start': start,
             'end': end,
-            'rms_ratio': rms_ratio,
-            'std_ratio': std_ratio,  # std_ratio,
-            'psd_ratio': psd_ratio,
-            'det_ratio': det_ratio,
+            'wav_ratio': wav_ratio,
+            'mad_ratio': mad_ratio,
             'pre_vals': pre_vals,
             'post_vals': post_vals,
-            # '_pre_vals': _pre_vals,
-            # '_post_vals': _post_vals,
-            # 'artifacts': max(pre_mask.mean(), post_mask.mean())
         })
 
     return detections
 
 
-def find_best_scale_sequence(recording, detections, scales=[10, 25, 50]):
+def find_best_scale_sequence(recording, detections, scales=[5, 10, 25, 50]):
     if not detections:
         raise Exception('No scale change detections specified!')
 
@@ -150,25 +132,12 @@ def find_best_scale_sequence(recording, detections, scales=[10, 25, 50]):
             for s2 in scales:
                 ratio = s2 / s1
                 loss = 0
-                if detection['det_ratio'] is not None:
-                    loss += (detection['det_ratio'] - ratio)**2
-                elif detection['rms_ratio'] is not None:
-                    loss += (detection['rms_ratio'] - ratio)**2
-
-                if detection['det_ratio'] is None and detection['rms_ratio'] is None:
+                if detection['wav_ratio'] is not None:
+                    loss += (detection['wav_ratio'] - ratio)**2
+                elif detection['mad_ratio'] is not None:
+                    loss += (detection['mad_ratio'] - ratio)**2
+                else:
                     loss = 0.1 * int(s1 != s2)
-
-                # if detection['rms_ratio'] is not None:
-                #     loss += (detection['rms_ratio'] - ratio)**2
-                # if detection['std_ratio'] is not None:
-                #     loss += (detection['std_ratio'] - ratio)**2
-                # if detection['psd_ratio'] is not None:
-                #     loss += (detection['psd_ratio'] - ratio)**2
-
-                # if (detection['rms_ratio'] is None and
-                #     detection['std_ratio'] is None and
-                #         detection['psd_ratio'] is None):
-                #     loss = int(s1 != s2)
 
                 T.add_edge((n, s1), (n + 1, s2), loss=loss)
 
@@ -183,7 +152,7 @@ def find_best_scale_sequence(recording, detections, scales=[10, 25, 50]):
     return [scale for _, scale in shortest_path[1:-1]]
 
 
-def scale_changes_correction(recording, base_scale=10, logfile=None, **kwargs):
+def scale_changes_correction(recording, base_scale=5, logfile=None, **kwargs):
     fixed = recording.copy()
     detections = detect_scale_changes(recording, **kwargs)
     if not detections:
