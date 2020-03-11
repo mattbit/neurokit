@@ -219,8 +219,8 @@ class RecordingInfo:
 def fix_edf(file, dest, anonymize=False):
     file = Path(file)
     dest = Path(dest)
-    with file.open('rb') as input:
-        raw_header = input.read(256)
+    with file.open('rb') as input_file:
+        raw_header = input_file.read(256)
 
     # Detect the encoding
     charset = chardet.detect(raw_header)

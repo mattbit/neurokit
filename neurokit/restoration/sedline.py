@@ -118,12 +118,12 @@ def find_best_scale_sequence(recording, detections, scales=[5, 10, 25, 50]):
     if not detections:
         raise Exception('No scale change detections specified!')
 
+    num_det = len(detections)
     T = nx.DiGraph()
     T.add_node('source')
     T.add_node('target')
 
-    T.add_nodes_from([(n, s)
-                      for s in scales for n in range(len(detections) + 1)])
+    T.add_nodes_from([(n, s) for s in scales for n in range(num_det + 1)])
     T.add_edges_from([('source', (0, s)) for s in scales], weight=0)
 
     for n, detection in enumerate(detections):
@@ -141,11 +141,7 @@ def find_best_scale_sequence(recording, detections, scales=[5, 10, 25, 50]):
 
                 T.add_edge((n, s1), (n + 1, s2), loss=loss)
 
-    T.add_edges_from([((n + 1, s), 'target') for s in scales], weight=0)
-
-    pos = {n: n for n in T.nodes}
-    pos['source'] = (-1, 0)
-    pos['target'] = (n + 2, 0)
+    T.add_edges_from([((num_det, s), 'target') for s in scales], weight=0)
 
     shortest_path = nx.shortest_path(T, 'source', 'target', weight='loss')
 
