@@ -1,6 +1,7 @@
 # Neurokit
 
 [![Build Status](https://travis-ci.com/mattbit/neurokit.svg?token=zKpBnjBx4d1NEMb7zFbd&branch=master)](https://travis-ci.com/mattbit/neurokit)
+[![CodeFactor](https://www.codefactor.io/repository/github/mattbit/neurokit/badge?s=18fe45ea01be615bbc76eec86a156970fbffd2e8)](https://www.codefactor.io/repository/github/mattbit/neurokit)
 
 A basic toolbox to deal with neurophysiological timeseries.
 
