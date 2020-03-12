@@ -21,7 +21,10 @@ def detect_artifacts(recording, **kwargs):
     return pd.DataFrame(artifacts, columns=['start', 'end', 'channel', 'description'])
 
 
-def detect_signal_artifacts(signal, detectors=['clipped', 'isoelectrical', 'amplitude']):
+def detect_signal_artifacts(signal, detectors=None):
+    if detectors is None:
+        detectors = ['clipped', 'isoelectrical', 'amplitude']
+
     mask = np.zeros_like(signal, dtype=bool)
 
     if not isinstance(detectors, dict):
