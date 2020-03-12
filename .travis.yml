@@ -2,8 +2,14 @@ language: python
 python:
   - '3.7'
   - '3.8'
+env:
+  - DEEPSOURCE_DSN=https://e694b68084af4dee96871149d8024d79@deepsource.io
 install:
   - pip install .
   - pip install -r requirements.txt
+  - pip install pytest pytest-cov
 script:
-  - pytest
+  - pytest --cov=./ --cov-report xml
+after_success:
+  - curl https://deepsource.io/cli | sh
+  - ./bin/deepsource report --analyzer test-coverage --key python --value-file ./coverage.xml
