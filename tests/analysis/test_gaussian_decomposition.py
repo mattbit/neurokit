@@ -70,6 +70,6 @@ class TestGaussianDecomposition(TestCase):
         dec.fit(ys + np.random.normal(0, 0.1, size=ys.size))
 
         a0, μ0, σ0 = dec.components_[0]
-        self.assertAlmostEqual(a0, 20., places=1)
-        self.assertAlmostEqual(μ0, 70., places=1)
-        self.assertAlmostEqual(σ0, 3., places=1)
+        self.assertAlmostEqual(a0, 20., delta=0.5)
+        self.assertAlmostEqual(μ0, 70., delta=0.5)
+        self.assertAlmostEqual(σ0, 3., delta=0.5)
