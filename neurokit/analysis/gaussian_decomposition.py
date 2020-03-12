@@ -1,3 +1,4 @@
+import numpy as np
 from numba import jit
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
@@ -7,6 +8,21 @@ from scipy.ndimage import gaussian_filter1d
 def _sum_of_gaussians(x, *params):
     params = np.array(params)
     return (params[0::3] * np.exp(- 0.5 * (x.reshape(x.size, 1) - params[1::3])**2 / params[2::3]**2)).sum(axis=1)
+
+
+def sum_of_gaussians(x, components):
+    '''Sum of Gaussian components.
+
+    Parameters
+    ----------
+    x : numpy.ndarray
+        1D array with x values of the curve.
+    components : list
+        List of components as (amplitude, location, scale).
+    Returns
+    -------
+    '''
+    return _sum_of_gaussians(x, *np.array(components).ravel())
 
 
 class GaussianDecomposition:
@@ -83,10 +99,10 @@ class GaussianDecomposition:
         return self
 
     def _guess_initial(self, x):
-        u0 = ndi.gaussian_filter1d(x, self.alpha, order=0, mode='wrap')
-        u2 = ndi.gaussian_filter1d(x, self.alpha, order=2, mode='wrap')
-        u3 = ndi.gaussian_filter1d(x, self.alpha, order=3, mode='wrap')
-        u4 = ndi.gaussian_filter1d(x, self.alpha, order=4, mode='wrap')
+        u0 = gaussian_filter1d(x, self.alpha, order=0, mode='wrap')
+        u2 = gaussian_filter1d(x, self.alpha, order=2, mode='wrap')
+        u3 = gaussian_filter1d(x, self.alpha, order=3, mode='wrap')
+        u4 = gaussian_filter1d(x, self.alpha, order=4, mode='wrap')
 
         idx, = np.nonzero(np.diff(np.sign(u3)))
         idx = list(idx[(x[idx] > 0) & (u2[idx] < 0) & (u4[idx] > 0)])
