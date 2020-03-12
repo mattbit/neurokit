@@ -114,10 +114,10 @@ def detect_scale_changes(recording, channels=None, merge_interval=1):
     return detections
 
 
-def find_best_scale_sequence(recording, detections, scales=None):
+def find_best_scale_sequence(detections, scales=None):
     if scales is None:
         scales = [5, 10, 25, 50]
-        
+
     if not detections:
         raise Exception('No scale change detections specified!')
 
@@ -157,7 +157,7 @@ def scale_changes_correction(recording, base_scale=5, logfile=None, **kwargs):
     if not detections:
         return fixed
 
-    scales = find_best_scale_sequence(recording, detections)
+    scales = find_best_scale_sequence(detections)
 
     starts = [recording.data.index.min()] + [d['start'] for d in detections]
     ends = [d['end'] for d in detections] + [recording.data.index.max()]
