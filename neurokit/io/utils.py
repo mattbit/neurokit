@@ -35,8 +35,6 @@ def merge_recordings(recordings, **kwargs):
         meta = {}
         for r in group:
             meta.update(r.meta)
-
-        frequency = group[0].frequency
         ids = [r.id for r in group if r.id is not None]
         res = np.array([r.meta['resolution'] for r in group]).max(axis=0)
 
