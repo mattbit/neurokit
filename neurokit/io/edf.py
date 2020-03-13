@@ -26,9 +26,9 @@ def write_edf(recording, path, artifacts=False):
         duration, samples_per_record = _calc_datarecord_params(
             recording.frequency)
         if recording.id is not None:
-            writer.setAdmincode(recording.id)
-            writer.setPatientCode(recording.id)
-            writer.setPatientName(recording.id)
+            id = str(recording.id)
+            writer.setAdmincode(id)
+            writer.setPatientCode(id)
 
         # patient_info = ' '.join(
         #     f'{key}={value}' for key, value in recording.patient.items())
