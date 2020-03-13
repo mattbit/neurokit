@@ -92,12 +92,12 @@ class PatientInfo:
     _re = re.compile(
         r'^(?P<code>[^\s]+)\s+(?P<sex>[MFX])\s+(?P<date>(?:\d{2}-\w{3,4}\.?-\d{4}|X))\s+(?P<name>[^\s]+)(?P<fields>(?:\s+[^\s]+)*)', re.UNICODE | re.IGNORECASE)
 
-    def __init__(self, code=None, sex=None, date=None, name=None, *extras):
+    def __init__(self, code=None, sex=None, date=None, name=None, extras=None):
         self.code = code
         self.sex = sex
         self.date = date
         self.name = name
-        self.extras = extras
+        self.extras = extras or []
 
     @classmethod
     def parse(cls, raw):
@@ -112,7 +112,7 @@ class PatientInfo:
         name = match['name']
         extras = match['fields'].strip().split()
 
-        return cls(code, sex, date, name, *extras)
+        return cls(code, sex, date, name, extras)
 
     def anonymize(self):
         self.code = None
@@ -136,12 +136,12 @@ class RecordingInfo:
     _re = re.compile(
         r'^Startdate\s+(?P<date>\d{2}-\w{3,4}\.?-\d{4})(?P<fields>(?:\s+[^\s]+)*)', re.UNICODE | re.IGNORECASE)
 
-    def __init__(self, date, code=None, technician=None, equipment=None, *extras):
+    def __init__(self, date, code=None, technician=None, equipment=None, extras=None):
         self.date = date
         self.code = code
         self.technician = technician
         self.equipment = equipment
-        self.extras = extras
+        self.extras = extras or []
 
     @classmethod
     def parse(cls, raw):
@@ -162,7 +162,7 @@ class RecordingInfo:
         equipment = fields[2]
         extras = fields[3:]
 
-        return cls(date, code, technician, equipment, *extras)
+        return cls(date, code, technician, equipment, extras)
 
     def anonymize(self):
         self.code = None

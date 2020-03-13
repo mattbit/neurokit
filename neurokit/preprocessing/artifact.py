@@ -18,7 +18,8 @@ def detect_artifacts(recording, **kwargs):
                 'description': 'auto detection'
             })
 
-    return pd.DataFrame(artifacts, columns=['start', 'end', 'channel', 'description'])
+    return pd.DataFrame(artifacts, columns=['start', 'end', 'channel',
+                                            'description'])
 
 
 def detect_signal_artifacts(signal, detectors=None):
@@ -32,7 +33,7 @@ def detect_signal_artifacts(signal, detectors=None):
 
     for detector, kwargs in detectors.items():
         if kwargs is None:
-            kwargs = dict()
+            kwargs = {}
         if detector == 'clipped':
             mask |= detect_clipped_signal(signal, **kwargs)
         elif detector == 'isoelectrical':
