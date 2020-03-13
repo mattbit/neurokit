@@ -4,7 +4,6 @@ import pywt
 import numpy as np
 import pandas as pd
 import networkx as nx
-import scipy.signal as ss
 import scipy.ndimage as ndi
 
 from ..utils import mask_to_intervals
@@ -81,18 +80,18 @@ def detect_scale_changes(recording, channels=None, merge_interval=1):
 
                 # Robust scale estimator: MAD
                 if pre_mask.mean() < 0.5 and post_mask.mean() < 0.5:
-                    mad_ratios = np.median(
-                        np.abs(pre_vals), axis=0) / np.median(np.abs(post_vals), axis=0)
-                    mad_ratio = mad_ratios.mean()
+                    mad_pre = np.median(np.abs(pre_vals), axis=0)
+                    mad_post = np.median(np.abs(post_vals), axis=0)
+                    mad_ratio = (mad_pre / mad_post).mean()
 
                 if min(len(_pre_vals), len(_post_vals)) > 128:
                     _wavelet = 'db4'
-                    _, pre_cD, _ = pywt.wavedec(
-                        pre_vals, _wavelet, level=2, axis=0)
-                    pre_D = pywt.waverec(
-                        [None, pre_cD, None], _wavelet, axis=0)
-                    _, post_cD, _ = pywt.wavedec(
-                        post_vals, _wavelet, level=2, axis=0)
+                    _, pre_cD, _ = pywt.wavedec(pre_vals, _wavelet, level=2,
+                                                axis=0)
+                    pre_D = pywt.waverec([None, pre_cD, None], _wavelet,
+                                         axis=0)
+                    _, post_cD, _ = pywt.wavedec(post_vals, _wavelet, level=2,
+                                                 axis=0)
                     post_D = pywt.waverec(
                         [None, post_cD, None], _wavelet, axis=0)
 
