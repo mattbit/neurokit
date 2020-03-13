@@ -4,7 +4,6 @@ import shutil
 import tarfile
 import tempfile
 import fastparquet
-import numpy as np
 import pandas as pd
 
 from .model import Recording

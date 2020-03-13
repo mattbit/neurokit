@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 
 
 def mask_to_intervals(mask, index=None):

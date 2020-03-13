@@ -6,12 +6,9 @@ import logging
 import unidecode
 import dateparser
 import numpy as np
-import pandas as pd
 from pathlib import Path
 from fractions import Fraction
 from pyedflib import EdfWriter
-
-from .model import Recording
 from ._mne import _recording_from_mne_raw
 
 
