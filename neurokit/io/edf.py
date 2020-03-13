@@ -39,8 +39,8 @@ def write_edf(recording, path, artifacts=False):
 
         writer.setStartdatetime(recording.start_date)
 
-        phys_max = recording.data.values.max()
-        phys_min = recording.data.values.min()
+        phys_max = np.nanmax(recording.data.values)
+        phys_min = np.nanmin(recording.data.values)
 
         for n, channel in enumerate(recording.channels):
             writer.setLabel(n, channel)
