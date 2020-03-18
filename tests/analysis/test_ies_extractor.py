@@ -27,4 +27,3 @@ class Recording :
         self.data = data
         self.channels = channels
         self.frequency = frequency
-

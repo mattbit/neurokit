@@ -25,11 +25,9 @@ def extract(signal, channels, threshold = 8):
         The data has an additional IES column indicating whether the pulse is
         IES or not
     """
-
     mean_signal = np.absolute(signal.data.loc[:, channels].values.mean(axis=1))
     mean_signal = mean_signal < threshold 
     possible_ies = ndi.morphology.binary_opening(mean_signal, structure =
                                                  np.ones(math.ceil(signal.frequency)))
     signal.data['IES'] = possible_ies
     return signal
-

@@ -228,8 +228,7 @@ def _repairs(signal, fs, dilate_window = 0.1, erode_window = 1.1):
     --------
     repaired : array
         boolean array
-    """    
-    ### TODO fix this section 
+    """
     dilate_win = floor(dilate_window*fs)
     erode_win = floor(erode_window*fs)
     dilated = morphology.binary_dilation(signal, structure = np.ones(dilate_win))
