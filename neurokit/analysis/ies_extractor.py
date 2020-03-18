@@ -31,3 +31,4 @@ def extract(signal, channels, threshold = 8):
                                                  np.ones(math.ceil(signal.frequency)))
     signal.data['IES'] = possible_ies
     return signal
+    
