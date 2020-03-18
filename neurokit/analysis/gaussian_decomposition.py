@@ -1,3 +1,4 @@
+import logging
 import numpy as np
 from numba import jit
 from scipy.optimize import curve_fit
@@ -40,6 +41,8 @@ class GaussianDecomposition:
     max_ls_iter : int
         Maximum number of least-squares iterations. If a fit is not found
         before this limit is reached, the guessed parameters are used.
+    normalize : bool
+        Whether to normalize the input for numerical stability.
 
     Attributes
     ----------
@@ -50,12 +53,14 @@ class GaussianDecomposition:
         Number of components.
     '''
 
-    def __init__(self, alpha=3, min_distance=10, max_ls_iter=20):
+    def __init__(self, alpha=3, min_distance=10, max_ls_iter=20,
+                 normalize=True):
         self.alpha = alpha
         self.min_distance = min_distance
         self.components_ = None
         self.n_components_ = None
         self.max_ls_iter = max_ls_iter
+        self.normalize = normalize
 
     def fit(self, x):
         '''Fit Gaussian components to a signal.
@@ -70,8 +75,16 @@ class GaussianDecomposition:
         self : GaussianDecomposition
             Returns the instance itself.
         '''
+        # Normalization between 0 and 1 for numerical stability
+        if self.normalize:
+            _offset = x.min()
+            _scale = x.max() - x.min()
+            y = (x - _offset) / _scale
+        else:
+            y = x
+
         # Initial guess
-        params_guess = self._guess_initial(x)
+        params_guess = self._guess_initial(y)
 
         # Setup optimization bounds
         bounds_l = np.full_like(params_guess, -np.inf)
@@ -83,17 +96,21 @@ class GaussianDecomposition:
         bounds = (bounds_l.ravel(), bounds_h.ravel())
 
         try:
-            _fit_params, _ = curve_fit(_sum_of_gaussians, np.arange(x.size),
-                                       x, p0=params_guess.ravel(),
+            _fit_params, _ = curve_fit(_sum_of_gaussians, np.arange(y.size),
+                                       y, p0=params_guess.ravel(),
                                        bounds=bounds,
                                        max_nfev=self.max_ls_iter)
         except RuntimeError:
+            logging.warning('Least squares fit failed, using initial guess.')
             _fit_params = params_guess.ravel()
 
         params = sorted(_fit_params.reshape(len(_fit_params) // 3, 3),
                         key=lambda x: x[0], reverse=True)
+        params = np.array(params)
+        if self.normalize:
+            params[:, 0] = params[:, 0] * _scale + _offset
 
-        self.components_ = np.array(params)
+        self.components_ = params
         self.n_components_ = len(self.components_)
 
         return self
