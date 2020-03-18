@@ -81,3 +81,15 @@ class TestGaussianDecomposition(TestCase):
         self.assertAlmostEqual(a0, 20., delta=0.5)
         self.assertAlmostEqual(μ0, 70., delta=0.5)
         self.assertAlmostEqual(σ0, 3., delta=0.5)
+
+    def test_fit_small_values(self):
+        xs = np.arange(100)
+        ys = sum_of_gaussians(xs, [(10e-12, 30, 5), (20e-12, 70, 3)])
+
+        dec = GaussianDecomposition(alpha=4, min_distance=10, max_ls_iter=100)
+        dec.fit(ys)
+
+        a0, μ0, σ0 = dec.components_[0]
+        self.assertAlmostEqual(a0, 20e-12, delta=0.5e-12)
+        self.assertAlmostEqual(μ0, 70, delta=0.5)
+        self.assertAlmostEqual(σ0, 3., delta=0.5)
