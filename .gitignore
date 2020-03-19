@@ -3,3 +3,5 @@
 .coverage
 coverage.xml
 htmlcov
+.ropeproject
+Neurokit.egg-info

@@ -25,6 +25,7 @@ setuptools.setup(
         'networkx',
         'dateparser',
         'chardet',
-        'unidecode'
+        'unidecode',
+        'mne',
     ]
 )
