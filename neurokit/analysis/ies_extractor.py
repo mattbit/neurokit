@@ -4,6 +4,7 @@
 import math
 from scipy import ndimage as ndi
 import numpy as np
+import copy
 
 
 def extract(recording, channels, threshold=8):
@@ -30,6 +31,6 @@ def extract(recording, channels, threshold=8):
     possible_ies = mean_recording < threshold
     ies_mask = ndi.morphology.binary_opening(possible_ies,
                                              structure=np.ones(math.ceil(recording.frequency)))
-    ies = recording.copy()
+    ies = copy.deepcopy(recording)
     ies.data['IES'] = ies_mask
     return ies

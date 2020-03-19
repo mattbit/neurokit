@@ -14,9 +14,8 @@ class TestIESExtractor(TestCase):
                                 'EEG R1(Fp2)': test_signal})
         channels = ('EEG L1(Fp1)', 'EEG R1(Fp2)')
         test_obj = Recording(df, channels, 64)
-        s = ies_extractor.extract(test_obj, channels, 8)
-        final_bool = s.data['IES']
-        print(np.array_equal(final_bool, test_bool))
+        response = ies_extractor.extract(test_obj, channels, 8)
+        final_bool = response.data['IES']
         self.assertTrue(np.array_equal(final_bool, test_bool))
 
 
