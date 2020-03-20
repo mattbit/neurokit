@@ -42,6 +42,6 @@ class TestSuppressions(TestCase):
         data = pd.DataFrame({'CH1': signal,
                              'time': time}).set_index('time')
         rec = Recording(data, frequency=100)
-        detections = detect_ies(bandpass(rec, np.asarray([8, 16])))
+        detections = detect_ies(bandpass(rec, (8, 16)))
         self.assertEqual(len(detections), 1)
         self.assertAlmostEqual(detections.loc[0].start, time[100], delta=datetime.timedelta(seconds=0.2))

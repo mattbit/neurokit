@@ -6,7 +6,6 @@ electrodes.
 import math
 import numpy as np
 import pandas as pd
-import scipy.signal as ss
 from scipy.ndimage.morphology import binary_opening
 
 from ..io import Recording
