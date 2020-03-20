@@ -11,6 +11,7 @@ from scipy.ndimage.morphology import binary_opening
 
 from ..io import Recording
 from ..utils import mask_to_intervals
+from ..preprocessing.filter import bandpass
 
 
 def detect_ies(recording: Recording, channels=None, threshold=8.,
@@ -70,27 +71,9 @@ def detect_alpha_suppression(recording: Recording, channels=None, frequency_band
     """
     if not channels:
         channels = recording.channels
-    filtered_signals = recording.data.loc[:, channels].apply(lambda x: _do_filter(x,
-                                                                                  recording.frequency,
-                                                                                  frequency_band))
-
-
-def _do_filter(signal, fs, frequency_band, order=4):
-    """Filter the signal in the given frequency band using a butterworth filter
-
-    Parameters
-    ----------
-    signal : numpy.array
-        signal to be filtered
-    fs: float
-        sampling frequency of the recording
-    frequency_band:
-        desired frequency range
-
-    Returns
-    -------
-        filtered : numpy.array
-            filtered signal
-    """
-    sos = ss.butter(order, frequency_band, 'bp', fs=fs, output='sos')
-    return ss.sosfilt(sos, signal)
+    if not frequency_band:
+        frequency_band = np.asarray([8, 16])
+    rec = recording.copy()
+    rec.data = recording.data.loc[:, channels]
+    rec = bandpass(rec, frequency_band)
+    return rec
