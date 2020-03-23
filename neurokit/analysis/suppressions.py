@@ -160,10 +160,7 @@ def _criteria(pair, threshold):
     -------
     boolean : bool
     """
-    if (pair[0] * threshold) < pair[1]:
-        return True
-    else:
-        return False
+    return (pair[0] * threshold) < pair[1]
 
 
 def _generate_conv_function(fs, b=0.72, tb=1, eta=1.96):
