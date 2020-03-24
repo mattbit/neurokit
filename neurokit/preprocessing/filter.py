@@ -64,7 +64,7 @@ def lowpass(recording: Recording,
     rec = recording.copy()
     Wn = freq / (0.5 * rec.frequency)
     sos = ss.butter(2, Wn, btype='lowpass', output='sos')
-    values = rec.data.loc[: channels].values
+    values = rec.data.loc[:, channels].values
     rec.data.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
     return rec
 
@@ -96,7 +96,7 @@ def highpass(recording: Recording,
     rec = recording.copy()
     Wn = freq / (0.5 * rec.frequency)
     sos = ss.butter(2, Wn, btype='highpass', output='sos')
-    values = rec.data.loc[: channels].values
+    values = rec.data.loc[:, channels].values
     rec.data.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
     return rec
 
