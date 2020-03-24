@@ -40,7 +40,7 @@ def detect_ies(recording: Recording, channels=None, threshold=8.,
 
     avg = recording.data.loc[:, channels].values.mean(axis=1)
     min_length = math.ceil(min_duration * recording.frequency)
-    th = threshold * calibration
+    th = threshold
     ies_mask = binary_opening(np.abs(avg) < th, np.ones(min_length))
 
     intervals = mask_to_intervals(ies_mask, recording.data.index)
