@@ -52,7 +52,7 @@ def detect_ies(recording: Recording, channels=None, threshold=8.,
     return pd.DataFrame(detections)
 
 
-def detect_alpha_suppressions(recording: Recording, channels=None, frequency_band=None):
+def detect_alpha_suppressions(recording: Recording, channels=None, frequency_band=(8, 16)):
     """Extract Alpha Suppression from recording
     Parameters
     ----------
@@ -70,11 +70,11 @@ def detect_alpha_suppressions(recording: Recording, channels=None, frequency_ban
     """
     if not channels:
         channels = recording.channels
-    if not frequency_band:
-        frequency_band = (8, 16)
     rec = recording.copy()
     rec.data = recording.data.loc[:, channels]
-    rec = bandpass(rec, frequency_band)
-    detections = detect_ies(rec)
-    return detections
-
+    filtered = bandpass(rec, frequency_band)
+    rms_before = np.sqrt(np.mean(rec.data.loc[:, :].values**2))
+    rms_after = np.sqrt(np.mean(filtered.data.loc[:, :].values**2))
+    quantile = rms_after / rms_before
+    threshold = np.quantile(filtered.data.loc[:, :].abs(), quantile)
+    return detect_ies(rec, threshold=threshold)
