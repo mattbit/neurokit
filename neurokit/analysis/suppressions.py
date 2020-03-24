@@ -14,7 +14,7 @@ from ..preprocessing.filter import bandpass
 
 
 def detect_ies(recording: Recording, channels=None, threshold=8.,
-               min_duration=1.):
+               min_duration=1., loss_factor=1.):
     """Extract the IES from a Recording.
 
     @todo See: the paper
@@ -29,7 +29,8 @@ def detect_ies(recording: Recording, channels=None, threshold=8.,
         The threshold value.
     min_duration: float, optional
         Minimum duration of a suppression in seconds.
-
+    loss_factor: float, optional
+        ratio of the rms power after to before filtering.
     Returns
     -------
     detections : pandas.DataFrame
@@ -40,7 +41,8 @@ def detect_ies(recording: Recording, channels=None, threshold=8.,
 
     avg = recording.data.loc[:, channels].values.mean(axis=1)
     min_length = math.ceil(min_duration * recording.frequency)
-    ies_mask = binary_opening(np.abs(avg) < threshold, np.ones(min_length))
+    th = threshold * loss_factor
+    ies_mask = binary_opening(np.abs(avg) < th, np.ones(min_length))
 
     intervals = mask_to_intervals(ies_mask, recording.data.index)
     detections = [{'start': start,
@@ -57,16 +59,16 @@ def detect_alpha_suppressions(recording: Recording, channels=None, frequency_ban
     Parameters
     ----------
     recording: neurokit.io.Recording
-        The merged recording information in the form of a Recording
+        The merged recording information in the form of a Recording.
     channels: collection.abc.Sequence
-        The channels to consider while calculating alpha suppressions
+        The channels to consider while calculating alpha suppressions.
     frequency_band:  collection.abc.Sequence
-        The frequency band to preserve for filtering in the form of [minFrequency, maxFrequency]
+        The frequency band to preserve for filtering in the form of [minFrequency, maxFrequency].
 
     Returns
     -------
     detections : pandas.DataFrame
-        the extracted durations of alpha suppression
+        the extracted durations of alpha suppression.
     """
     if not channels:
         channels = recording.channels
@@ -75,6 +77,5 @@ def detect_alpha_suppressions(recording: Recording, channels=None, frequency_ban
     filtered = bandpass(rec, frequency_band)
     rms_before = np.sqrt(np.mean(rec.data.loc[:, :].values**2))
     rms_after = np.sqrt(np.mean(filtered.data.loc[:, :].values**2))
-    quantile = rms_after / rms_before
-    threshold = np.quantile(filtered.data.loc[:, :].abs(), quantile)
-    return detect_ies(rec, threshold=threshold)
+    r = rms_after / rms_before
+    return detect_ies(rec, loss_factor=r)
