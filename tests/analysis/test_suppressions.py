@@ -5,7 +5,7 @@ import numpy as np
 import datetime
 from neurokit.io import Recording
 from neurokit.analysis.suppressions import detect_ies
-from neurokit.preprocessing.filter import bandpass
+from neurokit.analysis.suppressions import detect_alpha_suppressions
 
 
 class TestSuppressions(TestCase):
@@ -34,7 +34,7 @@ class TestSuppressions(TestCase):
         self.assertEqual(detections.loc[0].start, time[100])
         self.assertEqual(detections.loc[0].end, time[200])
 
-    def test_filter(self):
+    def test_detect_alpha_suppressions(self):
         t = np.arange(0, 10, 1e-2)
         signal = 10*np.sin(2*np.pi*12*t)+10*np.sin(2*np.pi*20*t)
         signal[100:200] = 0.5*np.sin(2*np.pi*12*t[100:200])
@@ -42,6 +42,6 @@ class TestSuppressions(TestCase):
         data = pd.DataFrame({'CH1': signal,
                              'time': time}).set_index('time')
         rec = Recording(data, frequency=100)
-        detections = detect_ies(bandpass(rec, (8, 16)))
+        detections = detect_alpha_suppressions(rec)
         self.assertEqual(len(detections), 1)
         self.assertAlmostEqual(detections.loc[0].start, time[100], delta=datetime.timedelta(seconds=0.2))
