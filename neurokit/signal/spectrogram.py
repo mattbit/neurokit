@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.signal as ss
-from types import Sequence
+from typing import Sequence
 
 from ..io.model import Recording
 
