@@ -12,7 +12,7 @@ def _sum_of_gaussians(x, *params):
 
 
 def sum_of_gaussians(x, components):
-    '''Sum of Gaussian components.
+    """Sum of Gaussian components.
 
     Parameters
     ----------
@@ -22,12 +22,12 @@ def sum_of_gaussians(x, components):
         List of components as (amplitude, location, scale).
     Returns
     -------
-    '''
+    """
     return _sum_of_gaussians(x, *np.array(components).ravel())
 
 
 class GaussianDecomposition:
-    '''Decompose a signal in a sum of Gaussian curves.
+    """Decompose a signal in a sum of Gaussian curves.
 
     Each Gaussian has the form:
         f(x) = amplitude * exp(- (x - loc)**2 / (2 * scale**@))
@@ -51,7 +51,7 @@ class GaussianDecomposition:
         Gaussian component, with largest amplitude components first.
     n_components_ : int
         Number of components.
-    '''
+    """
 
     def __init__(self, alpha=3, min_distance=10, max_ls_iter=20,
                  normalize=True):
@@ -63,7 +63,7 @@ class GaussianDecomposition:
         self.normalize = normalize
 
     def fit(self, x):
-        '''Fit Gaussian components to a signal.
+        """Fit Gaussian components to a signal.
 
         Parameters
         ----------
@@ -74,7 +74,7 @@ class GaussianDecomposition:
         -------
         self : GaussianDecomposition
             Returns the instance itself.
-        '''
+        """
         # Normalization between 0 and 1 for numerical stability
         if self.normalize:
             _offset = x.min()
@@ -101,7 +101,7 @@ class GaussianDecomposition:
                                        bounds=bounds,
                                        max_nfev=self.max_ls_iter)
         except RuntimeError:
-            logging.warning('Least squares fit failed, using initial guess.')
+            logging.warning("Least squares fit failed, using initial guess.")
             _fit_params = params_guess.ravel()
 
         params = sorted(_fit_params.reshape(len(_fit_params) // 3, 3),
@@ -117,10 +117,10 @@ class GaussianDecomposition:
 
     def _guess_initial(self, x):
         x_clip = x.clip(0)
-        u0 = gaussian_filter1d(x_clip, self.alpha, order=0, mode='wrap')
-        u2 = gaussian_filter1d(x_clip, self.alpha, order=2, mode='wrap')
-        u3 = gaussian_filter1d(x_clip, self.alpha, order=3, mode='wrap')
-        u4 = gaussian_filter1d(x_clip, self.alpha, order=4, mode='wrap')
+        u0 = gaussian_filter1d(x_clip, self.alpha, order=0, mode="wrap")
+        u2 = gaussian_filter1d(x_clip, self.alpha, order=2, mode="wrap")
+        u3 = gaussian_filter1d(x_clip, self.alpha, order=3, mode="wrap")
+        u4 = gaussian_filter1d(x_clip, self.alpha, order=4, mode="wrap")
 
         idx, = np.nonzero(np.diff(np.sign(u3)))
         idx = list(idx[(x[idx] > 0) & (u2[idx] < 0) & (u4[idx] > 0)])
