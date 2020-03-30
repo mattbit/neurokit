@@ -69,11 +69,10 @@ def detect_isoelectrical_signal(signal, tol=0, opening=10):
 
 
 def detect_high_amplitude_signal(signal, low=None, high=None):
-    if low is None:
-        low = np.sqrt((signal ** 2).mean())
-    if high is None:
-        high = 3 * np.sqrt((signal ** 2).mean())
-
     abs_signal = np.abs(signal)
+    if low is None:
+        low = 10
+    if high is None:
+        high = np.quantile(abs_signal, 0.995)
 
     return apply_hysteresis_threshold(abs_signal, low, high)
