@@ -64,6 +64,7 @@ class GaussianDecomposition:
     DecompositionError
         If it cannot find a valid decomposition (e.g. if least squares fit did
         not converge before `max_ls_iter` iterations).
+
     References
     ----------
     .. [1] Lindner, Robert R., et al. "Autonomous gaussian decomposition."
