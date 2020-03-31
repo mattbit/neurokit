@@ -53,8 +53,8 @@ def detect_ies(recording: Recording,
     avg = rec.data.loc[:, channels].values.mean(axis=1)
     min_length = math.ceil(min_duration * rec.frequency)
     with np.errstate(invalid='ignore'):
-        mask = np.abs(avg) < threshold
-    ies_mask = binary_opening(mask, np.ones(min_length))
+        ies_mask = np.abs(avg) < threshold
+    ies_mask = binary_opening(ies_mask, np.ones(min_length))
     intervals = mask_to_intervals(ies_mask, rec.data.index)
     detections = [{'start': start,
                    'end': end,
