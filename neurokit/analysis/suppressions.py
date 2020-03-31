@@ -52,9 +52,8 @@ def detect_ies(recording: Recording,
     rec = _eliminate_artifacts(recording)
     avg = rec.data.loc[:, channels].values.mean(axis=1)
     min_length = math.ceil(min_duration * rec.frequency)
-    old_err = np.seterr(invalid='ignore')
-    ies_mask = binary_opening(np.abs(avg) < threshold, np.ones(min_length))
-    np.seterr(old_err['invalid'])
+    with np.errstate(invalid='ignore'):
+        ies_mask = binary_opening(np.abs(avg) < threshold, np.ones(min_length))
     intervals = mask_to_intervals(ies_mask, rec.data.index)
     detections = [{'start': start,
                    'end': end,
