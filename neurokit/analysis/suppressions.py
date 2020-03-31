@@ -7,10 +7,13 @@ import math
 import numpy as np
 import pandas as pd
 from scipy.ndimage.morphology import binary_opening
+from scipy.ndimage.morphology import binary_dilation
 
 from ..io import Recording
 from ..utils import mask_to_intervals
+from ..utils import intervals_to_mask
 from ..preprocessing.filter import bandpass
+from ..preprocessing.artifact import detect_artifacts
 
 
 def detect_ies(recording: Recording, channels=None, threshold=8.,
@@ -37,13 +40,11 @@ def detect_ies(recording: Recording, channels=None, threshold=8.,
     """
     if not channels:
         channels = recording.channels
-
-    avg = recording.data.loc[:, channels].values.mean(axis=1)
-    min_length = math.ceil(min_duration * recording.frequency)
-    th = threshold
-    ies_mask = binary_opening(np.abs(avg) < th, np.ones(min_length))
-
-    intervals = mask_to_intervals(ies_mask, recording.data.index)
+    rec = _eliminate_artifacts(recording)
+    avg = rec.data.loc[:, channels].values.mean(axis=1)
+    min_length = math.ceil(min_duration * rec.frequency)
+    ies_mask = binary_opening(np.abs(avg) < threshold, np.ones(min_length))
+    intervals = mask_to_intervals(ies_mask, rec.data.index)
     detections = [{'start': start,
                    'end': end,
                    'channel': None,
@@ -79,3 +80,27 @@ def detect_alpha_suppressions(recording: Recording, channels=None, frequency_ban
     r = rms_after / rms_before
     threshold = 8 * r
     return detect_ies(rec, threshold=threshold)
+
+
+def _eliminate_artifacts(recording: Recording, min_duration=0.5):
+    """Sets detected artifacts to np.nan
+
+    Parameters
+    ----------
+    recording : neurokit.io.Recording
+        Recording of the EEG signal
+    min_duration : float, optional
+        min duration for dilation (0.5 second)
+
+    Returns
+    -------
+    rec : neurokit.io.recording
+    """
+    rec = recording.copy()
+    artifacts_intervals = detect_artifacts(rec, detectors={"amplitude"})
+    artifacts_mask = intervals_to_mask(artifacts_intervals.loc[:, ['start', 'end']].values, rec.data.index)
+    dilated = binary_dilation(artifacts_mask, structure=np.ones(round(rec.frequency * min_duration))).astype(bool)
+    di = mask_to_intervals(dilated, rec.data.index)
+    print(di)
+    rec.data.loc[dilated] = np.nan
+    return rec
