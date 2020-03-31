@@ -6,6 +6,7 @@ electrodes.
 import math
 import numpy as np
 import pandas as pd
+from typing import Sequence, Tuple
 from scipy.ndimage.morphology import binary_opening
 from scipy.ndimage.morphology import binary_dilation
 
@@ -16,11 +17,13 @@ from ..preprocessing.filter import bandpass
 from ..preprocessing.artifact import detect_artifacts
 
 
-def detect_ies(recording: Recording, channels=None, threshold=8.,
-               min_duration=1.):
-    """Extract the IES from a Recording.
+def detect_ies(recording: Recording,
+               channels: Sequence = None,
+               threshold: float = 8.,
+               min_duration: float = 1.):
+    """Detect iso-electric suppressions in a Recording.
 
-    @todo See: the paper
+    The detection procedure is based on the method presented in [1]_.
 
     Parameters
     ----------
@@ -37,6 +40,12 @@ def detect_ies(recording: Recording, channels=None, threshold=8.,
     -------
     detections : pandas.DataFrame
         The extracted detections of iso-electric suppressions.
+
+    References
+    ----------
+    .. [1] Cartailler, Jérôme, et al. "Alpha rhythm collapse predicts
+       iso-electric suppressions during anesthesia." Communications Biology
+       2.1 (2019).
     """
     if not channels:
         channels = recording.channels
@@ -54,21 +63,25 @@ def detect_ies(recording: Recording, channels=None, threshold=8.,
     return pd.DataFrame(detections)
 
 
-def detect_alpha_suppressions(recording: Recording, channels=None, frequency_band=(8, 16)):
-    """Extract Alpha Suppression from recording
+def detect_alpha_suppressions(recording: Recording,
+                              channels: Sequence = None,
+                              frequency_band: Tuple[float, float] = (8., 16.)):
+    """Extract Alpha Suppression from recording.
+
     Parameters
     ----------
     recording: neurokit.io.Recording
-        The merged recording information in the form of a Recording
-    channels: collection.abc.Sequence
-        The channels to consider while calculating alpha suppressions
-    frequency_band:  collection.abc.Sequence
-        The frequency band to preserve for filtering in the form of [minFrequency, maxFrequency]
+        The Recording object on which detection is performed.
+    channels: Sequence
+        The channels to consider when calculating α-suppressions.
+    frequency_band: tuple[float, float]
+        The frequency band used for the detection, in the form
+        `(min_freq, max_freq)`. Default is `(8, 16)`.
 
     Returns
     -------
     detections : pandas.DataFrame
-        the extracted durations of alpha suppression
+        The deteted α-suppressions.
     """
     if not channels:
         channels = recording.channels
@@ -82,24 +95,26 @@ def detect_alpha_suppressions(recording: Recording, channels=None, frequency_ban
     return detect_ies(rec, threshold=threshold)
 
 
-def _eliminate_artifacts(recording: Recording, min_duration=0.5):
-    """Sets detected artifacts to np.nan
+def _eliminate_artifacts(recording: Recording, min_duration: float = 0.5):
+    """Sets detected artifacts to np.nan.
 
     Parameters
     ----------
     recording : neurokit.io.Recording
-        Recording of the EEG signal
+        Recording of the EEG signal.
     min_duration : float, optional
-        min duration for dilation (0.5 second)
+        Minimum duration for dilation (0.5 second).
 
     Returns
     -------
-    rec : neurokit.io.recording
+    rec : neurokit.io.Recording
     """
     rec = recording.copy()
     artifacts_intervals = detect_artifacts(rec, detectors={"amplitude"})
-    artifacts_mask = intervals_to_mask(artifacts_intervals.loc[:, ['start', 'end']].values, rec.data.index)
-    dilated = binary_dilation(artifacts_mask, structure=np.ones(round(rec.frequency * min_duration))).astype(bool)
+    artifacts_mask = intervals_to_mask(
+        artifacts_intervals.loc[:, ['start', 'end']].values, rec.data.index)
+    dilated = binary_dilation(artifacts_mask, structure=np.ones(
+        round(rec.frequency * min_duration))).astype(bool)
     di = mask_to_intervals(dilated, rec.data.index)
     print(di)
     rec.data.loc[dilated] = np.nan
