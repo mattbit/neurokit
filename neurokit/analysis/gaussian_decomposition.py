@@ -1,4 +1,3 @@
-import logging
 import numpy as np
 from numba import jit
 from scipy.optimize import curve_fit
@@ -26,16 +25,23 @@ def sum_of_gaussians(x, components):
     return _sum_of_gaussians(x, *np.array(components).ravel())
 
 
+class DecompositionError(RuntimeError):
+    """Error in the decomposition."""
+
+
 class GaussianDecomposition:
     """Decompose a signal in a sum of Gaussian curves.
 
     Each Gaussian has the form:
-        f(x) = amplitude * exp(- (x - loc)**2 / (2 * scale**@))
+        f(x) = amplitude * exp(- (x - loc)**2 / (2 * scale**2))
 
     Parameters
     ----------
     alpha : float
         Smoothing coefficient (standard deviantion of Gaussian derivatives).
+    min_sigma : float
+        Minimum standard deviation of each component. Defaults to `alpha / 2`
+        if not explicitly set.
     min_distance : int
         Minimum distance between components location.
     max_ls_iter : int
@@ -51,11 +57,23 @@ class GaussianDecomposition:
         Gaussian component, with largest amplitude components first.
     n_components_ : int
         Number of components.
+
+    Raises
+    ------
+    DecompositionError
+        If it cannot find a valid decomposition (e.g. if least squares fit did
+        not converge before `max_ls_iter` iterations).
+
+    References
+    ----------
+    .. [1] Lindner, Robert R., et al. "Autonomous gaussian decomposition."
+       The Astronomical Journal 149.4 (2015).
     """
 
-    def __init__(self, alpha=3, min_distance=10, max_ls_iter=20,
-                 normalize=True):
+    def __init__(self, alpha=3, min_sigma=None, min_distance=10,
+                 max_ls_iter=20, normalize=True):
         self.alpha = alpha
+        self.min_sigma = alpha / 2 if min_sigma is None else min_sigma
         self.min_distance = min_distance
         self.components_ = None
         self.n_components_ = None
@@ -85,14 +103,19 @@ class GaussianDecomposition:
 
         # Initial guess
         params_guess = self._guess_initial(y)
+        params_guess[:, 2] = np.maximum(params_guess[:, 2], self.min_sigma)
+
+        if len(params_guess) == 0:
+            raise DecompositionError("Cannot guess initial parameters.")
 
         # Setup optimization bounds
         bounds_l = np.full_like(params_guess, -np.inf)
         bounds_h = np.full_like(params_guess, +np.inf)
         bounds_l[:, 0] = 0.
+        bounds_h[:, 0] = 1.01 * y.max()
         bounds_l[:, 1] = params_guess[:, 1] - 10
         bounds_h[:, 1] = params_guess[:, 1] + 10
-        bounds_l[:, 2] = 1e-9
+        bounds_l[:, 2] = self.min_sigma
         bounds = (bounds_l.ravel(), bounds_h.ravel())
 
         try:
@@ -101,8 +124,8 @@ class GaussianDecomposition:
                                        bounds=bounds,
                                        max_nfev=self.max_ls_iter)
         except RuntimeError:
-            logging.warning("Least squares fit failed, using initial guess.")
-            _fit_params = params_guess.ravel()
+            raise DecompositionError("Least squares fit did not converge. "
+                                     + "Try increasing `max_ls_iter`.")
 
         params = sorted(_fit_params.reshape(len(_fit_params) // 3, 3),
                         key=lambda x: x[0], reverse=True)
