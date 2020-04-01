@@ -45,3 +45,18 @@ class TestSuppressions(TestCase):
         detections = detect_alpha_suppressions(rec)
         self.assertEqual(len(detections), 1)
         self.assertAlmostEqual(detections.loc[0].start, time[100], delta=datetime.timedelta(seconds=0.2))
+
+    def test_artifacts(self):
+        t = np.arange(0, 10, 1e-2)
+        signal1 = 50*np.ones(len(t))
+        signal1[100:500] = 0
+        signal2 = 50*np.ones(len(t))
+        signal2[100:500] = 0
+        signal2[240:280] = 200 + 20 * np.sin(2 * 20 * np.pi * t[240:280])
+        time = pd.to_datetime(1e9 * t)
+        data = pd.DataFrame({'CH1': signal1,
+                             'CH2': signal2,
+                             'time': time}).set_index('time')
+        rec = Recording(data, frequency=100)
+        detections = detect_ies(rec)
+        self.assertEqual(len(detections), 2)
