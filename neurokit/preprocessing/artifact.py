@@ -1,15 +1,17 @@
 import numpy as np
 import pandas as pd
-from scipy.ndimage import binary_opening, binary_dilation, gaussian_filter1d
+from typing import Tuple
 from skimage.filters import apply_hysteresis_threshold
+from scipy.ndimage import binary_opening, binary_dilation, gaussian_filter1d
 
 from ..utils import mask_to_intervals
 
 
-def detect_artifacts(recording, **kwargs):
+def detect_artifacts(recording, dilate=10, **kwargs):
     artifacts = []
     for ch in recording.channels:
         mask = detect_signal_artifacts(recording.data[ch], **kwargs)
+        mask = binary_dilation(mask, np.ones(dilate, dtype=bool))
         for start, end in mask_to_intervals(mask, recording.data.index):
             artifacts.append({
                 'start': start,
@@ -52,10 +54,24 @@ class ArtifactDetector:
     multi_channel = False
 
     def detect(self, signal: np.ndarray) -> np.ndarray:
+        """Detect artifacts in the signal.
+
+        Parameters
+        ----------
+        signal : np.ndarray
+            The signal on which detection is performed. If detector is
+            `multi_channel`, multidimensional arrays can be used, otherwise a
+            1d array is expected.
+
+        Returns
+        -------
+        detection_mask : np.ndarray
+            The boolean mask of the artifact detection.
+        """
         raise NotImplementedError("Detection method not implemented")
 
 
-class ClippingDetector(ArtifactDetector):
+class ClippedSignalDetector(ArtifactDetector):
     """Detects clipped signal, roughly based on the method described in [1]_.
 
     Parameters
@@ -72,7 +88,7 @@ class ClippingDetector(ArtifactDetector):
        Convention 141 (2016).
     """
 
-    def detect(self, signal):
+    def detect(self, signal: np.ndarray) -> np.ndarray:
         low_clip, high_clip = self.detect_levels(signal)
 
         mask = np.zeros(len(signal), dtype=bool)
@@ -83,7 +99,8 @@ class ClippingDetector(ArtifactDetector):
 
         return mask
 
-    def detect_levels(self, signal):
+    def detect_levels(self, signal: np.ndarray) -> Tuple[float, float]:
+        """Detect clipping levels."""
         # Guess a sensible number of bins
         valid_signal = signal[~np.isnan(signal)]
         values = np.unique(valid_signal)
@@ -108,20 +125,54 @@ class ClippingDetector(ArtifactDetector):
         return low_level, high_level
 
 
+class ConstantSignalDetector(ArtifactDetector):
+    """Detects regions with constant signal.
 
-def detect_isoelectrical_signal(signal, tol=0, opening=10):
-    mask = np.abs(np.nan_to_num(np.diff(signal))) <= tol
-    if opening > 0:
-        mask = binary_opening(mask, iterations=opening)
+    Non-varying signal may be due to unbranched electrodes or recording
+    software glitches.
 
-    return np.append(mask, mask[-1])
+    Parameters
+    ----------
+    tol : float
+        Tolerance in the difference between subsequent samples, used to detect
+        non-varying signals. Default is 0.
+    interval : int
+        Number of constant valued adjacent samples required to detect an
+        artifact. Default is 10, meaning that the signal needs to stay constant
+        (variations up to `tol`) for more than 10 consequent samples to be
+        considered an artifact.
+    """
+
+    def __init__(self, tol=0, interval=10):
+        self.tol = tol
+        self.interval = interval
+
+    def detect(self, signal: np.ndarray) -> np.ndarray:
+        mask = np.abs(np.nan_to_num(np.diff(signal))) <= self.tol
+        if self.interval > 0:
+            mask = binary_opening(mask, np.ones(self.interval))
+
+        return np.append(mask, mask[-1])
 
 
-def detect_high_amplitude_signal(signal, low=None, high=None):
-    abs_signal = np.abs(signal)
-    if low is None:
-        low = 10
-    if high is None:
-        high = np.quantile(abs_signal, 0.995)
+class HighAmplitudeDetector(ArtifactDetector):
+    """Detect high amplitude signal with hysteresis thresholding.
 
-    return apply_hysteresis_threshold(abs_signal, low, high)
+    Parameters
+    ----------
+    low : float
+        Lower threshold. If not specified, the median (calculated case by case)
+        will be used.
+    high : float
+        High threshold (the main threshold, amplitude greater than this value
+        will be considered artifactual). If not specified, it will be
+        determined case by case based on quantile values.
+    """
+
+    def __init__(self, low=10, high=200):
+        self.low = low
+        self.high = high
+
+    def detect(self, signal: np.ndarray) -> np.ndarray:
+        abs_signal = np.abs(signal)
+        return apply_hysteresis_threshold(abs_signal, self.low, self.high)
