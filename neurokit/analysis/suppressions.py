@@ -9,6 +9,7 @@ import pandas as pd
 from typing import Sequence, Tuple
 from scipy.ndimage.morphology import binary_opening
 from scipy.ndimage.morphology import binary_dilation
+from pandas import DataFrame
 
 from ..io import Recording
 from ..utils import mask_to_intervals
@@ -50,11 +51,8 @@ def detect_ies(recording: Recording,
     if not channels:
         channels = recording.channels
     rec = _eliminate_artifacts(recording)
-    if not threshold:
-        threshold = 8.
-        mean_amplitude = rec.data.loc[:, channels].abs().mean().mean()
-        if mean_amplitude < 30:
-            threshold = threshold/1.25
+    if threshold is None:
+        threshold = _find_threshold(rec.data.loc[:, channels])
     envelope = recording.data.loc[:, channels].abs().values.max(axis=1)
     min_length = math.ceil(min_duration * rec.frequency)
     with np.errstate(invalid='ignore'):
@@ -125,3 +123,24 @@ def _eliminate_artifacts(recording: Recording, min_duration: float = 0.5):
         round(rec.frequency * min_duration))).astype(bool)
     rec.data.loc[dilated] = np.nan
     return rec
+
+
+def _find_threshold(data: DataFrame, threshold: float = 8.):
+    """
+    Perform automatic thresholding for the recording signals
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        signal data
+    threshold : float
+        default threshold returned when signal power is normal
+
+    Returns
+    -------
+    threshold : float
+        calculated threshold
+    """
+    mean_amplitude = data.abs().mean().mean()
+    if mean_amplitude < 30:
+        threshold = threshold / 1.25
+    return threshold
