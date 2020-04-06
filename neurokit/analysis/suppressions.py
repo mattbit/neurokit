@@ -19,7 +19,7 @@ from ..preprocessing.artifact import detect_artifacts
 
 def detect_ies(recording: Recording,
                channels: Sequence = None,
-               threshold: float = 8.,
+               threshold: float = None,
                min_duration: float = 1.):
     """Detect iso-electric suppressions in a Recording.
 
@@ -50,9 +50,11 @@ def detect_ies(recording: Recording,
     if not channels:
         channels = recording.channels
     rec = _eliminate_artifacts(recording)
-    mean_amplitude = rec.data.abs().mean().mean()
-    if mean_amplitude < 30:
-        threshold = threshold/1.25
+    if not threshold:
+        threshold = 8.
+        mean_amplitude = rec.data.loc[:, channels].abs().mean().mean()
+        if mean_amplitude < 30:
+            threshold = threshold/1.25
     envelope = recording.data.loc[:, channels].abs().values.max(axis=1)
     min_length = math.ceil(min_duration * rec.frequency)
     with np.errstate(invalid='ignore'):
