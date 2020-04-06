@@ -26,9 +26,9 @@ def detect_artifacts(recording, **kwargs):
 
 def detect_signal_artifacts(signal, detectors=None, pad=0):
     if detectors is None:
-        detectors = [HighAmplitudeDetector,
-                     ConstantSignalDetector,
-                     ClippedSignalDetector]
+        detectors = [HighAmplitudeDetector(),
+                     ConstantSignalDetector(),
+                     ClippedSignalDetector()]
 
     mask = np.zeros_like(signal, dtype=bool)
 
