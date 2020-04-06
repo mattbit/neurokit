@@ -7,11 +7,11 @@ from scipy.ndimage import binary_opening, binary_dilation, gaussian_filter1d
 from ..utils import mask_to_intervals
 
 
-def detect_artifacts(recording, dilate=10, **kwargs):
+def detect_artifacts(recording, **kwargs):
     artifacts = []
     for ch in recording.channels:
         mask = detect_signal_artifacts(recording.data[ch], **kwargs)
-        mask = binary_dilation(mask, np.ones(dilate, dtype=bool))
+
         for start, end in mask_to_intervals(mask, recording.data.index):
             artifacts.append({
                 'start': start,
@@ -24,26 +24,19 @@ def detect_artifacts(recording, dilate=10, **kwargs):
                                             'description'])
 
 
-def detect_signal_artifacts(signal, detectors=None):
+def detect_signal_artifacts(signal, detectors=None, pad=0):
     if detectors is None:
-        detectors = ['clipped', 'isoelectrical', 'amplitude']
+        detectors = [HighAmplitudeDetector,
+                     ConstantSignalDetector,
+                     ClippedSignalDetector]
 
     mask = np.zeros_like(signal, dtype=bool)
 
-    if not isinstance(detectors, dict):
-        detectors = {detector: None for detector in detectors}
+    for detector in detectors:
+        mask |= detector.detect(signal)
 
-    for detector, kwargs in detectors.items():
-        if kwargs is None:
-            kwargs = {}
-        if detector == 'clipped':
-            mask |= detect_clipped_signal(signal, **kwargs)
-        elif detector == 'isoelectrical':
-            mask |= detect_isoelectrical_signal(signal, **kwargs)
-        elif detector == 'amplitude':
-            mask |= detect_high_amplitude_signal(signal, **kwargs)
-        else:
-            raise Exception(f'Invalid detector "{detector}".')
+    if pad > 0:
+        return binary_dilation(mask, np.ones(pad))
 
     return mask
 
