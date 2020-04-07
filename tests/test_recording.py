@@ -30,7 +30,8 @@ def test_artifacts_to_nan():
     assert rec_with_nan.data.loc[start_1:end_1, 'CH2'].isna().all()
 
     assert rec_with_nan.data.loc[start_2:end_2, 'CH1'].isna().all()
-    assert not rec_with_nan.data.loc[start_2:end_2, 'CH2'].isna().any()
+    _start_3_pre = start_3 - pd.Timedelta(0.01, unit='s')
+    assert not rec_with_nan.data.loc[start_2:_start_3_pre, 'CH2'].isna().any()
 
-    assert not rec_with_nan.data.loc[end_2:end_3, 'CH1'].isna().any()
+    assert not rec_with_nan.data.loc[end_2:start_3, 'CH1'].isna().any()
     assert rec_with_nan.data.loc[start_3:end_3, 'CH2'].isna().all()
