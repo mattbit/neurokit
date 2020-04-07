@@ -14,7 +14,7 @@ from ..io import Recording
 from ..utils import mask_to_intervals
 from ..utils import intervals_to_mask
 from ..preprocessing.filter import bandpass
-from ..preprocessing.artifact import detect_artifacts
+from ..preprocessing.artifact import (detect_artifacts, HighAmplitudeDetector)
 
 
 def detect_ies(recording: Recording,
@@ -114,7 +114,8 @@ def _eliminate_artifacts(recording: Recording, min_duration: float = 0.5):
     rec : neurokit.io.Recording
     """
     rec = recording.copy()
-    artifacts_intervals = detect_artifacts(rec, detectors={"amplitude"})
+    artifacts_intervals = detect_artifacts(
+        rec, detectors=[HighAmplitudeDetector()])
     artifacts_mask = intervals_to_mask(
         artifacts_intervals.loc[:, ['start', 'end']].values, rec.data.index)
     dilated = binary_dilation(artifacts_mask, structure=np.ones(
