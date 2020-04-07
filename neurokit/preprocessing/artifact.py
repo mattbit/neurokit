@@ -42,8 +42,7 @@ def detect_signal_artifacts(signal, detectors=None, pad=0):
 
 
 class ArtifactDetector:
-    """Detects signal artifacts.
-    """
+    """Detects signal artifacts."""
     multi_channel = False
 
     def detect(self, signal: np.ndarray) -> np.ndarray:
