@@ -96,7 +96,7 @@ def detect_alpha_suppressions(recording: Recording,
     rms_after = np.sqrt(np.mean(filtered.data.loc[:, :].values**2))
     r = rms_after / rms_before
     threshold = 8 * r
-    return detect_ies(rec, threshold=threshold)
+    return detect_ies(filtered, threshold=threshold)
 
 
 def _eliminate_artifacts(recording: Recording, min_duration: float = 0.5):
