@@ -153,12 +153,10 @@ class HighAmplitudeDetector(ArtifactDetector):
     Parameters
     ----------
     low : float
-        Lower threshold. If not specified, the median (calculated case by case)
-        will be used.
+        Lower threshold. Default value is 10.
     high : float
         High threshold (the main threshold, amplitude greater than this value
-        will be considered artifactual). If not specified, it will be
-        determined case by case based on quantile values.
+        will be considered artifactual).
     """
 
     def __init__(self, low=10, high=200):
