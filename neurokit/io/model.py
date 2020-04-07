@@ -1,8 +1,5 @@
 import numpy as np
 import pandas as pd
-from scipy.ndimage import binary_dilation
-
-from ..utils import intervals_to_mask
 
 
 class Recording:
