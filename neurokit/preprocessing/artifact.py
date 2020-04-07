@@ -91,7 +91,7 @@ class ClippedSignalDetector(ArtifactDetector):
 
         return mask
 
-    def detect_levels(self, signal: np.ndarray) -> Tuple[float, float]:
+    def detect_levels(self, signal: np.ndarray) -> Tuple[float, float]:  # skipcq: PYL-R0201
         """Detect clipping levels."""
         # Guess a sensible number of bins
         valid_signal = signal[~np.isnan(signal)]
