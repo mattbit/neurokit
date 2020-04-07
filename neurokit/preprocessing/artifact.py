@@ -98,7 +98,7 @@ class ClippedSignalDetector(ArtifactDetector):
         valid_signal = signal[~np.isnan(signal)]
         values = np.unique(valid_signal)
         if values.size < 100:
-            raise Exception("Not enough unique values to detect clipping.")
+            raise ValueError("Not enough unique values to detect clipping.")
         num_bins = min(values.size, 65536)
 
         # Calculate the histogram
