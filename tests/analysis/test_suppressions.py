@@ -1,18 +1,38 @@
+import pytest
 import numpy as np
 import pandas as pd
 from pytest import approx
-from neurokit.analysis.suppressions import (detect_suppressions,
+from unittest.mock import patch
+from neurokit.analysis.suppressions import (detect_ies,
+                                            detect_suppressions,
                                             detect_alpha_suppressions)
 from neurokit.sim import simulated_eeg_recording
 
 
+@patch('neurokit.analysis.suppressions.detect_suppressions')
+def test_detect_ies(detect_suppressions_mock):
+    rec = simulated_eeg_recording()
+    detect_suppressions_mock.return_value = 'TEST'
+    detections = detect_ies(
+        rec, channels=['EEG_1'], threshold=3.2, min_duration=0.123)
+
+    detect_suppressions_mock.assert_called_once_with(
+        rec, channels=['EEG_1'], threshold=3.2, min_duration=0.123)
+    assert detections == 'TEST'
+
+
+@pytest.mark.repeat(10)
 def test_detect_suppressions():
     rec = simulated_eeg_recording(1, duration=10, frequency=100)
-    rec = rec.filter(1, None)
+    rec = rec.filter(0.5, None)
 
-    rec.data.iloc[100:250] /= rec.data.iloc[100:250].max()
-    rec.data.iloc[300:350] /= rec.data.iloc[300:350].max() / 5
-    rec.data.iloc[500:800] /= rec.data.iloc[500:800].max() / 5
+    # We must start with no suppressions
+    detections = detect_suppressions(rec, min_duration=1.)
+    assert len(detections) == 0
+
+    rec.data.iloc[100:250] /= rec.data.iloc[100:250].abs().max()
+    rec.data.iloc[300:360] /= rec.data.iloc[300:360].abs().max() / 5
+    rec.data.iloc[500:800] /= rec.data.iloc[500:800].abs().max() / 5
 
     ts = (rec.data.index - rec.start_date).total_seconds()
 
@@ -23,9 +43,11 @@ def test_detect_suppressions():
     detections['start'] = detections['start'].dt.total_seconds()
     detections['end'] = detections['end'].dt.total_seconds()
 
-    assert detections.loc[0].start == approx(ts[100], abs=0.2)
-    assert detections.loc[0].end == approx(ts[250], abs=0.2)
-    assert detections.loc[1].start == approx(ts[500], abs=0.2)
+    # Detection may start earlier and finish later than expected because of the
+    # randomness of the signal, but they cannot start later or finish earlier.
+    assert ts[0] <= detections.loc[0].start <= ts[101]
+    assert ts[249] <= detections.loc[0].end <= ts[350]
+    assert ts[360] <= detections.loc[1].start <= ts[501]
 
     detections = detect_suppressions(rec, min_duration=0.5)
     detections.loc[:, ('start', 'end')] -= rec.start_date
@@ -33,26 +55,33 @@ def test_detect_suppressions():
     detections['end'] = detections['end'].dt.total_seconds()
 
     assert len(detections) == 3
-    assert detections.loc[1].start == approx(ts[300], abs=0.2)
-    assert detections.loc[1].end == approx(ts[350], abs=0.2)
+    assert ts[200] <= detections.loc[1].start <= ts[301]
+    assert ts[359] <= detections.loc[1].end <= ts[460]
 
-    detections = detect_suppressions(rec, min_duration=1.)
+    # import matplotlib.pyplot as plt
+    # plt.plot(ts, rec.data.EEG_1)
+    # plt.hlines([-1.5, 1.5], 0, 10, lw=1)
+    # plt.vlines([1, 2.50, 3, 3.6, 5, 8], -50, 50, color='r')
+    # plt.ylim(-5, 5)
+
+    detections = detect_suppressions(rec, min_duration=1.49)
     assert len(detections) == 2
 
-    detections = detect_suppressions(rec, threshold=1.5)
+    detections = detect_suppressions(rec, threshold=1.5, min_duration=1.)
     detections.loc[:, ('start', 'end')] -= rec.start_date
     detections['start'] = detections['start'].dt.total_seconds()
     detections['end'] = detections['end'].dt.total_seconds()
 
-    assert len(detections) == 1
-    assert detections.loc[0].start == approx(ts[100], abs=0.2)
-    assert detections.loc[0].end == approx(ts[250], abs=0.2)
+    assert 1 <= len(detections) <= 2
+    assert ts[0] <= detections.loc[0].start <= ts[101]
+    assert ts[249] <= detections.loc[0].end <= ts[350]
 
 
+@pytest.mark.repeat(10)
 def test_detect_alpha_suppressions():
     # Generate a weak recording
     rec = simulated_eeg_recording(['EEG_1'], duration=10, frequency=100,
-                                  amplitude=40)
+                                  amplitude=8)
     rec = rec.filter(1, 20)
 
     ts = (rec.data.index - rec.start_date).total_seconds().values
@@ -82,11 +111,10 @@ def test_detect_alpha_suppressions():
     det_1_start = (detections.loc[1].start - rec.start_date).total_seconds()
     det_1_end = (detections.loc[1].end - rec.start_date).total_seconds()
 
-    assert det_0_start == approx(1, abs=0.2)
-    assert det_0_end == approx(2.4, abs=0.2)
-    assert det_1_start == approx(4, abs=0.2)
-    assert det_1_end == approx(6, abs=0.2)
-
+    assert det_0_start == approx(1, abs=0.25)
+    assert det_0_end == approx(2.4, abs=0.25)
+    assert det_1_start == approx(4, abs=0.25)
+    assert det_1_end == approx(6, abs=0.25)
 
 
 def test_artifacts():
