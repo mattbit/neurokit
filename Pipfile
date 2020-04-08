@@ -1,0 +1,29 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+python-language-server = {extras = ["all"],version = "*"}
+pytest = "*"
+pytest-repeat = "*"
+pytest-cov = "*"
+pytest-randomly = "*"
+neurokit = {editable = true,path = "."}
+
+[packages]
+numpy = "*"
+scipy = "*"
+pandas = "*"
+mne = "*"
+pyedflib = "*"
+dateparser = "*"
+unidecode = "*"
+chardet = "*"
+pywavelets = "*"
+networkx = "*"
+fastparquet = "*"
+plotly = "*"
+
+[requires]
+python_version = "3.7"

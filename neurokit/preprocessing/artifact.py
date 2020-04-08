@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
-from scipy.ndimage import binary_opening
+from typing import Tuple
 from skimage.filters import apply_hysteresis_threshold
+from scipy.ndimage import binary_opening, binary_dilation, gaussian_filter1d
 
 from ..utils import mask_to_intervals
 
@@ -10,6 +11,7 @@ def detect_artifacts(recording, **kwargs):
     artifacts = []
     for ch in recording.channels:
         mask = detect_signal_artifacts(recording.data[ch], **kwargs)
+
         for start, end in mask_to_intervals(mask, recording.data.index):
             artifacts.append({
                 'start': start,
@@ -22,57 +24,145 @@ def detect_artifacts(recording, **kwargs):
                                             'description'])
 
 
-def detect_signal_artifacts(signal, detectors=None):
+def detect_signal_artifacts(signal, detectors=None, pad=0):
     if detectors is None:
-        detectors = ['clipped', 'isoelectrical', 'amplitude']
+        detectors = [HighAmplitudeDetector(),
+                     ConstantSignalDetector(),
+                     ClippedSignalDetector()]
 
     mask = np.zeros_like(signal, dtype=bool)
 
-    if not isinstance(detectors, dict):
-        detectors = {detector: None for detector in detectors}
+    for detector in detectors:
+        mask |= detector.detect(signal)
 
-    for detector, kwargs in detectors.items():
-        if kwargs is None:
-            kwargs = {}
-        if detector == 'clipped':
-            mask |= detect_clipped_signal(signal, **kwargs)
-        elif detector == 'isoelectrical':
-            mask |= detect_isoelectrical_signal(signal, **kwargs)
-        elif detector == 'amplitude':
-            mask |= detect_high_amplitude_signal(signal, **kwargs)
-        else:
-            raise Exception(f'Invalid detector "{detector}".')
+    if pad > 0:
+        return binary_dilation(mask, np.ones(pad))
 
     return mask
 
 
-def detect_clipped_signal(signal):
-    hist, edges = np.histogram(signal[~np.isnan(signal)],
-                               bins=65536, density=True)
+class ArtifactDetector:
+    """Detects signal artifacts."""
+    multi_channel = False
 
-    mask = np.ones(len(signal), dtype=bool)
-    if hist[0] > hist[:50].mean():
-        mask &= signal > edges[1]
+    def detect(self, signal: np.ndarray) -> np.ndarray:
+        """Detect artifacts in the signal.
 
-    if hist[-1] > hist[:-50].mean():
-        mask &= signal < edges[-2]
+        Parameters
+        ----------
+        signal : np.ndarray
+            The signal on which detection is performed. If detector is
+            `multi_channel`, multidimensional arrays can be used, otherwise a
+            1d array is expected.
 
-    return ~mask
+        Returns
+        -------
+        detection_mask : np.ndarray
+            The boolean mask of the artifact detection.
+        """
+        raise NotImplementedError("Detection method not implemented")
 
 
-def detect_isoelectrical_signal(signal, tol=0, opening=10):
-    mask = np.abs(np.nan_to_num(np.diff(signal))) <= tol
-    if opening > 0:
-        mask = binary_opening(mask, iterations=opening)
+class ClippedSignalDetector(ArtifactDetector):
+    """Detects clipped signal, roughly based on the method described in [1]_.
 
-    return np.append(mask, mask[-1])
+    Parameters
+    ----------
+    border_bins : int
+        Number of bins to consider to calculate the deviation.
+    total_bins : int
+        Number of bins used to calculate the histogram.
+
+    References
+    ----------
+    .. [1] Laguna, Christopher, and Alexander Lerch. "An efficient algorithm
+       for clipping detection and declipping audio." Audio Engineering Society
+       Convention 141 (2016).
+    """
+
+    def detect(self, signal: np.ndarray) -> np.ndarray:
+        low_clip, high_clip = self.detect_levels(signal)
+
+        mask = np.zeros(len(signal), dtype=bool)
+        if low_clip is not None:
+            mask |= signal < low_clip
+        if high_clip is not None:
+            mask |= signal > high_clip
+
+        return mask
+
+    def detect_levels(self, signal: np.ndarray) -> Tuple[float, float]:  # skipcq: PYL-R0201
+        """Detect clipping levels."""
+        # Guess a sensible number of bins
+        valid_signal = signal[~np.isnan(signal)]
+        values = np.unique(valid_signal)
+        if values.size < 100:
+            raise ValueError("Not enough unique values to detect clipping.")
+        num_bins = min(values.size, 65536)
+
+        # Calculate the histogram
+        hist, edges = np.histogram(valid_signal, bins=num_bins)
+
+        # Detect the clipping
+        sigma = int(np.round(0.01 * num_bins))
+        a, b = 3 * sigma, 10 * sigma
+        ref = hist - gaussian_filter1d(hist, sigma, mode='constant')
+
+        _threshold_low = ref[a:b].mean() + 3 * ref[a:b].std()
+        _threshold_high = ref[-b:-a].mean() + 3 * ref[-b:-a].std()
+
+        low_level = edges[1] if ref[0] > _threshold_low else None
+        high_level = edges[-2] if ref[-1] > _threshold_high else None
+
+        return low_level, high_level
 
 
-def detect_high_amplitude_signal(signal, low=None, high=None):
-    abs_signal = np.abs(signal)
-    if low is None:
-        low = 10
-    if high is None:
-        high = np.quantile(abs_signal, 0.995)
+class ConstantSignalDetector(ArtifactDetector):
+    """Detects regions with constant signal.
 
-    return apply_hysteresis_threshold(abs_signal, low, high)
+    Non-varying signal may be due to unbranched electrodes or recording
+    software glitches.
+
+    Parameters
+    ----------
+    tol : float
+        Tolerance in the difference between subsequent samples, used to detect
+        non-varying signals. Default is 0.
+    interval : int
+        Number of constant valued adjacent samples required to detect an
+        artifact. Default is 10, meaning that the signal needs to stay constant
+        (variations up to `tol`) for more than 10 consequent samples to be
+        considered an artifact.
+    """
+
+    def __init__(self, tol=0, interval=10):
+        self.tol = tol
+        self.interval = interval
+
+    def detect(self, signal: np.ndarray) -> np.ndarray:
+        mask = np.abs(np.nan_to_num(np.diff(signal))) <= self.tol
+        if self.interval > 0:
+            mask = binary_opening(mask, np.ones(self.interval))
+
+        return np.append(mask, mask[-1])
+
+
+class HighAmplitudeDetector(ArtifactDetector):
+    """Detect high amplitude signal with hysteresis thresholding.
+
+    Parameters
+    ----------
+    low : float
+        Lower threshold. Default value is 10.
+    high : float
+        High threshold (the main threshold, amplitude greater than this value
+        will be considered artifactual).
+    """
+
+    def __init__(self, low=10, high=200):
+        self.low = low
+        self.high = high
+
+    def detect(self, signal: np.ndarray) -> np.ndarray:
+        abs_signal = np.abs(signal)
+        return apply_hysteresis_threshold(abs_signal, self.low, self.high)

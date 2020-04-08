@@ -1,18 +1,10 @@
 import mne
-import logging
 import pandas as pd
 from .model import Recording
 
 
 def _recording_from_mne_raw(raw: mne.io.Raw):
-    mne.utils.logger.setLevel(logging.WARNING)
-
-    timestamp, microseconds = raw.info['meas_date']
-    initial_time = timestamp * 10**9 + microseconds * 10**3
-
-    data = raw.to_data_frame(scaling_time=10**9)
-
-    data.index = pd.to_datetime(initial_time + data.index, unit='ns')
+    data = raw.to_data_frame(time_format='datetime').set_index('time')
 
     meta = {
         'frequency': raw.info['sfreq'],

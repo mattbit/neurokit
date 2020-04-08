@@ -1,6 +1,6 @@
 """
-This module calculates the IES Suppression by taking average of the frontal
-electrodes.
+This module calculates the suppressions, in particular iso-electric
+suppressions (IES) and α-suppressions (suppressions in the alpha band).
 """
 
 import math
@@ -8,20 +8,16 @@ import numpy as np
 import pandas as pd
 from typing import Sequence, Tuple
 from scipy.ndimage.morphology import binary_opening
-from scipy.ndimage.morphology import binary_dilation
-from pandas import DataFrame
 
 from ..io import Recording
 from ..utils import mask_to_intervals
-from ..utils import intervals_to_mask
 from ..preprocessing.filter import bandpass
-from ..preprocessing.artifact import detect_artifacts
 
 
-def detect_ies(recording: Recording,
-               channels: Sequence = None,
-               threshold: float = None,
-               min_duration: float = 1.):
+def detect_suppressions(recording: Recording,
+                        channels: Sequence = None,
+                        threshold: float = None,
+                        min_duration: float = 1.):
     """Detect iso-electric suppressions in a Recording.
 
     The detection procedure is based on the method presented in [1]_.
@@ -50,7 +46,8 @@ def detect_ies(recording: Recording,
     """
     if not channels:
         channels = recording.channels
-    rec = _eliminate_artifacts(recording)
+        
+    rec = recording.artifacts_to_nan()
     if threshold is None:
         threshold = _find_threshold(rec.data.loc[:, channels])
     envelope = recording.data.loc[:, channels].abs().values.max(axis=1)
@@ -67,6 +64,11 @@ def detect_ies(recording: Recording,
                   for start, end in intervals]
 
     return pd.DataFrame(detections)
+
+
+def detect_ies(*args, **kwargs):
+    """Alias of `detect_suppressions`."""
+    return detect_suppressions(*args, **kwargs)
 
 
 def detect_alpha_suppressions(recording: Recording,
@@ -94,35 +96,11 @@ def detect_alpha_suppressions(recording: Recording,
     rec = recording.copy()
     rec.data = recording.data.loc[:, channels]
     filtered = bandpass(rec, frequency_band)
-    rms_before = np.sqrt(np.mean(rec.data.loc[:, :].values**2))
-    rms_after = np.sqrt(np.mean(filtered.data.loc[:, :].values**2))
-    r = rms_after / rms_before
-    threshold = 8 * r
-    return detect_ies(rec, threshold=threshold)
+    rms_before = np.sqrt(np.mean(rec.data.values**2))
+    rms_after = np.sqrt(np.mean(filtered.data.values**2))
+    threshold = 8 * rms_after / rms_before
 
-
-def _eliminate_artifacts(recording: Recording, min_duration: float = 0.5):
-    """Sets detected artifacts to np.nan.
-
-    Parameters
-    ----------
-    recording : neurokit.io.Recording
-        Recording of the EEG signal.
-    min_duration : float, optional
-        Minimum duration for dilation (0.5 second).
-
-    Returns
-    -------
-    rec : neurokit.io.Recording
-    """
-    rec = recording.copy()
-    artifacts_intervals = detect_artifacts(rec, detectors={"amplitude"})
-    artifacts_mask = intervals_to_mask(
-        artifacts_intervals.loc[:, ['start', 'end']].values, rec.data.index)
-    dilated = binary_dilation(artifacts_mask, structure=np.ones(
-        round(rec.frequency * min_duration))).astype(bool)
-    rec.data.loc[dilated] = np.nan
-    return rec
+    return detect_suppressions(filtered, threshold=threshold)
 
 
 def _find_threshold(data: DataFrame, threshold: float = 8.):
@@ -144,3 +122,4 @@ def _find_threshold(data: DataFrame, threshold: float = 8.):
     if mean_amplitude < 30:
         threshold = threshold / 1.25
     return threshold
+

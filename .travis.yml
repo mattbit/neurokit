@@ -7,9 +7,8 @@ env:
     - DEEPSOURCE_DSN=https://e694b68084af4dee96871149d8024d79@deepsource.io
     - DISCORD_WEBHOOK=https://discordapp.com/api/webhooks/692322350452178965/dXLSKaq_8XP1vEt8bvhEQRUlFB1hyuOWtWXh4xF4VkNjn0M_e161P6QDbsYsm8Wu5RAK
 install:
-  - pip install .
-  - pip install -r requirements.txt
-  - pip install pytest pytest-cov
+  - pip install pipenv
+  - pipenv install --dev
 script:
   - pytest --cov=./ --cov-report xml
 after_success:
