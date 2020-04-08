@@ -46,7 +46,7 @@ def detect_suppressions(recording: Recording,
     """
     if not channels:
         channels = recording.channels
-        
+
     rec = recording.artifacts_to_nan()
     if threshold is None:
         threshold = _find_threshold(rec.data.loc[:, channels])
@@ -103,7 +103,7 @@ def detect_alpha_suppressions(recording: Recording,
     return detect_suppressions(filtered, threshold=threshold)
 
 
-def _find_threshold(data: DataFrame, threshold: float = 8.):
+def _find_threshold(data: pd.DataFrame, threshold: float = 8.):
     """
     Perform automatic thresholding for the recording signals
     Parameters
@@ -122,4 +122,3 @@ def _find_threshold(data: DataFrame, threshold: float = 8.):
     if mean_amplitude < 30:
         threshold = threshold / 1.25
     return threshold
-
