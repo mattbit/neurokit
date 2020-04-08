@@ -26,6 +26,6 @@ setuptools.setup(
         'dateparser',
         'chardet',
         'unidecode',
-        'mne',
+        'mne>=0.20.0,<0.21',
     ]
 )

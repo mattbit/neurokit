@@ -70,8 +70,44 @@ class Recording:
         return Recording(data, self.meta.copy(),
                          annotations=annotations, artifacts=artifacts)
 
+    def filter(self, low, high=None):
+        from ..preprocessing import filter as _filter
+        if not low:
+            return _filter.lowpass(self, high)
+
+        if not high:
+            return _filter.highpass(self, low)
+
+        return _filter.bandpass(self, (low, high))
+
+    def artifacts_to_nan(self, pad=0):
+        """Convert artifacts to NaN.
+
+        Parameters
+        ----------
+        pad : float
+            Padding (in seconds) that should be added around artifacts. For
+            example, if `pad = 1` all values from 1 second before the beginning
+            of the artifact to 1 second after its end will be set to `np.nan`.
+
+        Returns
+        -------
+        recording : neurokit.io.Recording
+            A copy of the orignal recording with `numpy.nan` instead of
+            artifacted signal.
+        """
+        rec = self.copy()
+        dt = pd.Timedelta(pad, unit='s')
+        for artifact in self.artifacts.itertuples():
+            start = artifact.start - dt
+            end = artifact.end + dt
+            chs = slice(None) if artifact.channel is None else artifact.channel
+            rec.data.loc[start:end, chs] = np.nan
+
+        return rec
+
     def to_edf(self, filename, **kwargs):
-        from neurokit.io.edf import write_edf
+        from .edf import write_edf
 
         return write_edf(self, filename, **kwargs)
 
@@ -88,8 +124,10 @@ class Recording:
             raise Exception('Recording can only be sliced.')
 
         try:
-            start = self.start_date + pd.to_timedelta(key.start) if key.start is not None else None
-            end = self.start_date + pd.to_timedelta(key.stop) if key.stop is not None else None
+            start = self.start_date + \
+                pd.to_timedelta(key.start) if key.start is not None else None
+            end = self.start_date + \
+                pd.to_timedelta(key.stop) if key.stop is not None else None
         except ValueError:
             start, end = pd.to_datetime(key.start), pd.to_datetime(key.stop)
 
