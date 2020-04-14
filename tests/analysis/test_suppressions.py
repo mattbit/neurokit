@@ -130,7 +130,6 @@ def test_artifacts():
     start = rec.start_date + pd.Timedelta(2.5, unit='s')
     end = rec.start_date + pd.Timedelta(3.99, unit='s')
     rec.artifacts.loc[0, :] = start, end, None, 'test'
-    rec = rec.artifacts_to_nan()
 
     detections = detect_suppressions(rec)
     assert len(detections) == 0

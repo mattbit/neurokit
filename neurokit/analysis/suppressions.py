@@ -51,7 +51,7 @@ def detect_suppressions(recording: Recording,
     rec = recording.artifacts_to_nan()
     if threshold is None:
         threshold = _find_threshold(rec.data.loc[:, channels])
-    envelope = recording.data.loc[:, channels].abs().values.max(axis=1)
+    envelope = rec.data.loc[:, channels].abs().values.max(axis=1)
     min_length = math.ceil(min_duration * rec.frequency)
     with np.errstate(invalid='ignore'):
         ies_mask = envelope < threshold
