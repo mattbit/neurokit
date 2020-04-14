@@ -5,9 +5,7 @@ import pandas as pd
 
 
 class ArtifactRestorator:
-    """Restores artifacts.
-
-    """
+    """Restores artifacts."""
 
     def __init__(self):
         self.window = pd.Timedelta(seconds=1)

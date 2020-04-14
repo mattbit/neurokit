@@ -30,6 +30,7 @@ def test_detect_suppressions():
     detections = detect_suppressions(rec, min_duration=1.)
     assert len(detections) == 0
 
+    # Add suppressions
     rec.data.iloc[100:250] /= rec.data.iloc[100:250].abs().max()
     rec.data.iloc[300:360] /= rec.data.iloc[300:360].abs().max() / 5
     rec.data.iloc[500:800] /= rec.data.iloc[500:800].abs().max() / 5
