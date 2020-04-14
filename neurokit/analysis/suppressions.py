@@ -16,7 +16,7 @@ from ..preprocessing.filter import bandpass
 
 def detect_suppressions(recording: Recording,
                         channels: Sequence = None,
-                        threshold: float = 8.,
+                        threshold: float = None,
                         min_duration: float = 1.):
     """Detect iso-electric suppressions in a Recording.
 
@@ -46,10 +46,12 @@ def detect_suppressions(recording: Recording,
     """
     if not channels:
         channels = recording.channels
+
     rec = recording.artifacts_to_nan()
+    if threshold is None:
+        threshold = _find_threshold(rec.data.loc[:, channels])
     envelope = recording.data.loc[:, channels].abs().values.max(axis=1)
     min_length = math.ceil(min_duration * rec.frequency)
-
     with np.errstate(invalid='ignore'):
         ies_mask = envelope < threshold
     ies_mask = binary_opening(ies_mask, np.ones(min_length))
@@ -99,3 +101,24 @@ def detect_alpha_suppressions(recording: Recording,
     threshold = 8 * rms_after / rms_before
 
     return detect_suppressions(filtered, threshold=threshold)
+
+
+def _find_threshold(data: pd.DataFrame, threshold: float = 8.):
+    """
+    Perform automatic thresholding for the recording signals
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        signal data
+    threshold : float
+        default threshold returned when signal power is normal
+
+    Returns
+    -------
+    threshold : float
+        calculated threshold
+    """
+    mean_amplitude = data.abs().mean().mean()
+    if mean_amplitude < 30:
+        threshold = threshold / 1.25
+    return threshold
