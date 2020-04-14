@@ -89,7 +89,7 @@ def detect_alpha_suppressions(recording: Recording,
     Returns
     -------
     detections : pandas.DataFrame
-        The deteted α-suppressions.
+        The detected α-suppressions.
     """
     if not channels:
         channels = recording.channels
