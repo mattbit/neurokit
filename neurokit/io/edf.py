@@ -104,7 +104,7 @@ class PatientInfo:
         raw = raw.strip()
         match = cls._re.match(raw)
         if not match:
-            return cls(None, None, None, None, *raw.split(' '))
+            return cls(None, None, None, None, raw.split(' '))
 
         code = match['code']
         sex = match['sex'].upper()
