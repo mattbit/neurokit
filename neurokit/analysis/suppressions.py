@@ -11,6 +11,7 @@ from scipy.ndimage.morphology import binary_opening
 
 from ..io import Recording
 from ..utils import mask_to_intervals
+from ..utils import intervals_to_mask
 from ..preprocessing.filter import bandpass
 
 
@@ -122,3 +123,30 @@ def _find_threshold(data: pd.DataFrame, threshold: float = 8.):
     if mean_amplitude < 30:
         threshold = threshold / 1.25
     return threshold
+
+
+class SuppressionAnalyzer:
+    """Analyze detected suppression from recodrings."""
+
+    def __init__(self, recording: Recording):
+        self.recording = recording
+        self.ies_detections = None
+        self.alpha_detections = None
+
+    def detect_ies(self, **kwargs):
+        self.ies_detections = detect_ies(self.recording, **kwargs)
+        return self.ies_detections
+
+    def detect_alpha_suppressions(self, **kwargs):
+        detections = detect_alpha_suppressions(recording=self.recording, **kwargs)
+        ies_mask = intervals_to_mask(self.ies_detections.loc[:, ['start', 'end']].values, self.recording.data.index)
+        alpha_mask = intervals_to_mask(detections.loc[:, ['start', 'end']].values, self.recording.data.index)
+        alpha_mask[ies_mask] = False
+        intervals = mask_to_intervals(alpha_mask, self.recording.data.index)
+        detections = [{'start': start,
+                       'end': end,
+                       'channel': None,
+                       'description': 'AlphaSupp'}
+                      for start, end in intervals]
+        self.alpha_detections = pd.DataFrame(detections)
+        return self.alpha_detections
