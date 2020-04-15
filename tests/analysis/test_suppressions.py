@@ -82,41 +82,53 @@ def test_detect_suppressions():
 @pytest.mark.repeat(10)
 def test_detect_alpha_suppressions():
     # Generate a weak recording
-    rec = simulated_eeg_recording(['EEG_1'], duration=10, frequency=100,
-                                  amplitude=8)
-    rec = rec.filter(1, 20)
+    fs = 200
+    rec = simulated_eeg_recording(['EEG_1'], duration=10, frequency=fs,
+                                  amplitude=80, theta=2.75)
+    rec = rec.filter(0.25)
 
     ts = (rec.data.index - rec.start_date).total_seconds().values
 
     # Add a strong alpha wave
     alpha_band = 60 * np.cos(2 * np.pi * 9.8 * ts)
-    alpha_band[100:250] *= 0.09
-    alpha_band[700:730] = 0
-    alpha_band[400:600] *= 0.09
+    alpha_band[1 * fs:int(2.5 * fs)] = 0.
+    alpha_band[7 * fs:int(7.3 * fs)] = 0.
+    alpha_band[4 * fs:6 * fs] = 0.
     rec.data.loc[:, 'EEG_1'] += alpha_band
 
-    # filtered = rec.filter(9, 11)
+    # import plotly.express as px
+    # filtered = rec.filter(8, 12)
     # rms_before = np.sqrt(np.mean(rec.data.loc[:, :].values**2))
     # rms_after = np.sqrt(np.mean(filtered.data.loc[:, :].values**2))
     # r = rms_after / rms_before
     # threshold = 8 * r
-    #
+    # print(threshold)
+    # px.line(x=ts, y=filtered.data['EEG_1'])
+    # px.line(x=rec.data.index, y=rec.data['EEG_1'])
+
     # import matplotlib.pyplot as plt
     # plt.plot(ts, filtered.data.EEG_1)
     # plt.hlines([-threshold, +threshold], 0, 10)
+
     analyzer = SuppressionAnalyzer(rec)
-    detections = analyzer.detect_alpha_suppressions()
+
+    # Ensure no iso-electric suppression is detected.
+    iso_elec_suppressions = analyzer.detect_ies()
+    assert len(iso_elec_suppressions) == 0
+
+    detections = analyzer.detect_alpha_suppressions(frequency_band=(7.5, 12.5))
     assert len(detections) == 2
 
     det_0_start = (detections.loc[0].start - rec.start_date).total_seconds()
     det_0_end = (detections.loc[0].end - rec.start_date).total_seconds()
     det_1_start = (detections.loc[1].start - rec.start_date).total_seconds()
     det_1_end = (detections.loc[1].end - rec.start_date).total_seconds()
+    (detections.loc[1].start - rec.start_date).total_seconds()
 
-    assert det_0_start == approx(1, abs=0.3)
-    assert det_0_end == approx(2.4, abs=0.3)
-    assert det_1_start == approx(4, abs=0.3)
-    assert det_1_end == approx(6, abs=0.3)
+    assert 1 <= det_0_start <= 1.75
+    assert 2 <= det_0_end <= 2.75
+    assert 4 <= det_1_start <= 4.75
+    assert 5.5 <= det_1_end <= 6.25
 
 
 def test_artifacts():
