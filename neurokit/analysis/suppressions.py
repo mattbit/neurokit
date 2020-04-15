@@ -11,7 +11,7 @@ from scipy.ndimage.morphology import binary_opening
 
 from ..io import Recording
 from ..utils import mask_to_intervals
-from ..preprocessing.filter import bandpass
+from ..preprocessing.filters import bandpass
 
 
 def detect_suppressions(recording: Recording,

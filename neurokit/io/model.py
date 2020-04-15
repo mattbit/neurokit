@@ -70,15 +70,15 @@ class Recording:
         return Recording(data, self.meta.copy(),
                          annotations=annotations, artifacts=artifacts)
 
-    def filter(self, low, high=None):
-        from ..preprocessing import filter as _filter
+    def filter(self, low, high=None, **kwargs):
+        from ..preprocessing import filters
         if not low:
-            return _filter.lowpass(self, high)
+            return filters.lowpass(self, high, **kwargs)
 
         if not high:
-            return _filter.highpass(self, low)
+            return filters.highpass(self, low, **kwargs)
 
-        return _filter.bandpass(self, (low, high))
+        return filters.bandpass(self, (low, high), **kwargs)
 
     def artifacts_to_nan(self, pad=0):
         """Convert artifacts to NaN.
