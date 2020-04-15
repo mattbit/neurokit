@@ -11,11 +11,10 @@ from scipy.ndimage.morphology import binary_opening
 
 from ..io import Recording
 from ..utils import mask_to_intervals
-from ..utils import intervals_to_mask
 from ..preprocessing.filter import bandpass
 
 
-def detect_suppressions(recording: Recording,
+def _detect_suppressions(recording: Recording,
                         channels: Sequence = None,
                         threshold: float = None,
                         min_duration: float = 1.):
@@ -36,7 +35,7 @@ def detect_suppressions(recording: Recording,
 
     Returns
     -------
-    detections : pandas.DataFrame
+    detections : list
         The extracted detections of iso-electric suppressions.
 
     References
@@ -56,52 +55,7 @@ def detect_suppressions(recording: Recording,
     with np.errstate(invalid='ignore'):
         ies_mask = envelope < threshold
     ies_mask = binary_opening(ies_mask, np.ones(min_length))
-
-    intervals = mask_to_intervals(ies_mask, rec.data.index)
-    detections = [{'start': start,
-                   'end': end,
-                   'channel': None,
-                   'description': 'IES'}
-                  for start, end in intervals]
-
-    return pd.DataFrame(detections)
-
-
-def detect_ies(*args, **kwargs):
-    """Alias of `detect_suppressions`."""
-    return detect_suppressions(*args, **kwargs)
-
-
-def detect_alpha_suppressions(recording: Recording,
-                              channels: Sequence = None,
-                              frequency_band: Tuple[float, float] = (8., 16.)):
-    """Extract Alpha Suppression from recording.
-
-    Parameters
-    ----------
-    recording: neurokit.io.Recording
-        The Recording object on which detection is performed.
-    channels: Sequence
-        The channels to consider when calculating α-suppressions.
-    frequency_band: tuple[float, float]
-        The frequency band used for the detection, in the form
-        `(min_freq, max_freq)`. Default is `(8, 16)`.
-
-    Returns
-    -------
-    detections : pandas.DataFrame
-        The detected α-suppressions.
-    """
-    if not channels:
-        channels = recording.channels
-    rec = recording.copy()
-    rec.data = recording.data.loc[:, channels]
-    filtered = bandpass(rec, frequency_band)
-    rms_before = np.sqrt(np.mean(rec.data.values**2))
-    rms_after = np.sqrt(np.mean(filtered.data.values**2))
-    threshold = 8 * rms_after / rms_before
-
-    return detect_suppressions(filtered, threshold=threshold)
+    return ies_mask
 
 
 def _find_threshold(data: pd.DataFrame, threshold: float = 8.):
@@ -129,24 +83,58 @@ class SuppressionAnalyzer:
     """Analyze detected suppression from recodrings."""
 
     def __init__(self, recording: Recording):
-        self.recording = recording
-        self.ies_detections = None
-        self.alpha_detections = None
+        self._recording = recording
+        self._ies_detections = None
+        self._alpha_detections = None
+        self._ies_mask = None
 
     def detect_ies(self, **kwargs):
-        self.ies_detections = detect_ies(self.recording, **kwargs)
-        return self.ies_detections
+        """Alias of `_detect_suppressions`."""
+        ies_mask = _detect_suppressions(self._recording, **kwargs)
+        intervals = mask_to_intervals(ies_mask, self._recording.data.index)
+        detections = [{'start': start,
+                       'end': end,
+                       'channel': None,
+                       'description': 'IES'}
+                      for start, end in intervals]
+        self._ies_detections = pd.DataFrame(detections)
+        return self._ies_detections
 
-    def detect_alpha_suppressions(self, **kwargs):
-        detections = detect_alpha_suppressions(recording=self.recording, **kwargs)
-        ies_mask = intervals_to_mask(self.ies_detections.loc[:, ['start', 'end']].values, self.recording.data.index)
-        alpha_mask = intervals_to_mask(detections.loc[:, ['start', 'end']].values, self.recording.data.index)
-        alpha_mask[ies_mask] = False
-        intervals = mask_to_intervals(alpha_mask, self.recording.data.index)
+    def detect_alpha_suppressions(self,
+                                  channels: Sequence = None,
+                                  frequency_band: Tuple[float, float] = (8., 16.)):
+        """Extract Alpha Suppression from recording.
+
+        Parameters
+        ----------
+        channels: Sequence
+            The channels to consider when calculating α-suppressions.
+        frequency_band: tuple[float, float]
+            The frequency band used for the detection, in the form
+            `(min_freq, max_freq)`. Default is `(8, 16)`.
+
+        Returns
+        -------
+        detections : pandas.DataFrame
+            The detected α-suppressions.
+        """
+        if not channels:
+            channels = self._recording.channels
+        rec = self._recording.copy()
+        rec.data = self._recording.data.loc[:, channels]
+        filtered = bandpass(rec, frequency_band)
+        rms_before = np.sqrt(np.mean(rec.data.values ** 2))
+        rms_after = np.sqrt(np.mean(filtered.data.values ** 2))
+        threshold = 8 * rms_after / rms_before
+        alpha_mask = _detect_suppressions(filtered, threshold=threshold)
+        if self._ies_mask is None:
+            self._ies_mask = _detect_suppressions(self._recording)
+        alpha_mask[self._ies_mask] = False
+        intervals = mask_to_intervals(alpha_mask, self._recording.data.index)
         detections = [{'start': start,
                        'end': end,
                        'channel': None,
                        'description': 'AlphaSupp'}
                       for start, end in intervals]
-        self.alpha_detections = pd.DataFrame(detections)
-        return self.alpha_detections
+        self._alpha_detections = pd.DataFrame(detections)
+        return self._alpha_detections
