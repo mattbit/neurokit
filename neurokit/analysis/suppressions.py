@@ -35,8 +35,8 @@ def _detect_suppressions(recording: Recording,
 
     Returns
     -------
-    detections : list
-        The extracted detections of iso-electric suppressions.
+    detections : numpy.ndarray
+        The boolean mask with detections of iso-electric suppressions.
 
     References
     ----------
@@ -79,18 +79,52 @@ def _find_threshold(data: pd.DataFrame, threshold: float = 8.):
     return threshold
 
 
+def _detect_alpha_suppressions(
+    recording: Recording,
+    channels: Sequence = None,
+    frequency_band: Tuple[float, float] = (8., 16.)
+):
+    """Extract Alpha Suppression from recording.
+
+    Parameters
+    ----------
+    recording: neurokit.io.Recording
+        The Recording object on which detection is performed.
+    channels: Sequence
+        The channels to consider when calculating α-suppressions.
+    frequency_band: tuple[float, float]
+        The frequency band used for the detection, in the form
+        `(min_freq, max_freq)`. Default is `(8, 16)`.
+
+    Returns
+    -------
+    detections : numpy.ndarray
+        The boolean mask with the detected α-suppressions.
+    """
+    if not channels:
+        channels = recording.channels
+    rec = recording.copy()
+    rec.data = recording.data.loc[:, channels]
+    filtered = bandpass(rec, frequency_band)
+    rms_before = np.sqrt(np.mean(rec.data.values**2))
+    rms_after = np.sqrt(np.mean(filtered.data.values**2))
+    threshold = 8 * rms_after / rms_before
+
+    return _detect_suppressions(filtered, threshold=threshold)
+
+
 class SuppressionAnalyzer:
     """Detects isoelectric- and α-suppressions in a Recording."""
 
     def __init__(self, recording: Recording):
-        self._recording = recording
+        self.recording = recording
         self._ies_detections = None
         self._alpha_detections = None
         self._ies_mask = None
 
     def detect_ies(self, **kwargs):
-        ies_mask = _detect_suppressions(self._recording, **kwargs)
-        intervals = mask_to_intervals(ies_mask, self._recording.data.index)
+        self._ies_mask = _detect_suppressions(self.recording, **kwargs)
+        intervals = mask_to_intervals(self._ies_mask, self.recording.data.index)
         detections = [{'start': start,
                        'end': end,
                        'channel': None,
@@ -104,7 +138,7 @@ class SuppressionAnalyzer:
             channels: Sequence = None,
             frequency_band: Tuple[float, float] = (8., 16.)
     ):
-        """Extract Alpha Suppression from recording.
+        """Extract Alpha Suppression from Recording.
 
         Parameters
         ----------
@@ -119,24 +153,22 @@ class SuppressionAnalyzer:
         detections : pandas.DataFrame
             The detected α-suppressions.
         """
-        if not channels:
-            channels = self._recording.channels
-        rec = self._recording.copy()
-        rec.data = self._recording.data.loc[:, channels]
-        filtered = bandpass(rec, frequency_band)
-        rms_before = np.sqrt(np.mean(rec.data.values ** 2))
-        rms_after = np.sqrt(np.mean(filtered.data.values ** 2))
-        threshold = 8 * rms_after / rms_before
-        alpha_mask = _detect_suppressions(filtered, threshold=threshold)
         if self._ies_mask is None:
             self._ies_mask = _detect_suppressions(
-                self._recording, min_duration=2.5)
-        alpha_mask[self._ies_mask] = False
-        intervals = mask_to_intervals(alpha_mask, self._recording.data.index)
+                self.recording, min_duration=2.5)
+
+        rec = self.recording.copy()
+        rec.data[self._ies_mask] = np.nan
+        alpha_mask = _detect_alpha_suppressions(
+            self.recording, channels, frequency_band)
+
+        intervals = mask_to_intervals(alpha_mask, self.recording.data.index)
         detections = [{'start': start,
                        'end': end,
                        'channel': None,
-                       'description': 'AlphaSupp'}
+                       'description': 'alpha_suppression'}
                       for start, end in intervals]
+
         self._alpha_detections = pd.DataFrame(detections)
+
         return self._alpha_detections
