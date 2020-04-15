@@ -1,2 +1,2 @@
 from .artifact import *
-from .filter import *
+from .filters import *
