@@ -80,7 +80,7 @@ def _find_threshold(data: pd.DataFrame, threshold: float = 8.):
 
 
 class SuppressionAnalyzer:
-    """Analyze detected suppression from recodrings."""
+    """Detects isoelectric- and α-suppressions in a Recording."""
 
     def __init__(self, recording: Recording):
         self._recording = recording
@@ -89,7 +89,6 @@ class SuppressionAnalyzer:
         self._ies_mask = None
 
     def detect_ies(self, **kwargs):
-        """Alias of `_detect_suppressions`."""
         ies_mask = _detect_suppressions(self._recording, **kwargs)
         intervals = mask_to_intervals(ies_mask, self._recording.data.index)
         detections = [{'start': start,
@@ -100,9 +99,11 @@ class SuppressionAnalyzer:
         self._ies_detections = pd.DataFrame(detections)
         return self._ies_detections
 
-    def detect_alpha_suppressions(self,
-                                  channels: Sequence = None,
-                                  frequency_band: Tuple[float, float] = (8., 16.)):
+    def detect_alpha_suppressions(
+            self,
+            channels: Sequence = None,
+            frequency_band: Tuple[float, float] = (8., 16.)
+    ):
         """Extract Alpha Suppression from recording.
 
         Parameters

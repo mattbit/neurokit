@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 import pandas as pd
-from pytest import approx
 from unittest.mock import patch
 from neurokit.analysis.suppressions import SuppressionAnalyzer
 from neurokit.sim import simulated_eeg_recording
