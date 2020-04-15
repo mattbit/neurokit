@@ -15,9 +15,9 @@ from ..preprocessing.filter import bandpass
 
 
 def _detect_suppressions(recording: Recording,
-                        channels: Sequence = None,
-                        threshold: float = None,
-                        min_duration: float = 1.):
+                         channels: Sequence = None,
+                         threshold: float = None,
+                         min_duration: float = 1.):
     """Detect iso-electric suppressions in a Recording.
 
     The detection procedure is based on the method presented in [1]_.
@@ -128,7 +128,8 @@ class SuppressionAnalyzer:
         threshold = 8 * rms_after / rms_before
         alpha_mask = _detect_suppressions(filtered, threshold=threshold)
         if self._ies_mask is None:
-            self._ies_mask = _detect_suppressions(self._recording, min_duration=2.5)
+            self._ies_mask = _detect_suppressions(
+                self._recording, min_duration=2.5)
         alpha_mask[self._ies_mask] = False
         intervals = mask_to_intervals(alpha_mask, self._recording.data.index)
         detections = [{'start': start,
