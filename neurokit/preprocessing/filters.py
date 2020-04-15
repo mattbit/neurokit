@@ -7,10 +7,10 @@ from ..io import Recording
 
 def bandpass(recording: Recording,
              freqs: Tuple[float, float],
-             channels: Sequence[str] = None) -> Recording:
+             channels: Sequence[str] = None,
+             order: int = 1) -> Recording:
     """Bandpass filter.
 
-    Uses a forward-backward Butterworth of order 2 (effective order 4).
 
     Parameters
     ----------
@@ -21,6 +21,11 @@ def bandpass(recording: Recording,
     channels : Sequence[str], optional
         The channels that must be filtered. If `None`, the filter will be
         applied to all channels.
+    order : int
+        Order of the Butterworth filter that will be used. Since the bandpass
+        is a combination of two filters and the filtering is done in a
+        forward-backward manner, the resulting effective order will be the four
+        times this value. Default to 1, corresponding to an effective order 4.
 
     Returns
     -------
@@ -31,7 +36,7 @@ def bandpass(recording: Recording,
         channels = recording.channels
     rec = recording.copy()
     Wn = np.asarray(freqs) / (0.5 * rec.frequency)
-    sos = ss.butter(2, Wn, btype='bandpass', output='sos')
+    sos = ss.butter(order, Wn, btype='bandpass', output='sos')
     values = rec.data.loc[:, channels].values
     rec.data.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
     return rec
@@ -39,10 +44,9 @@ def bandpass(recording: Recording,
 
 def lowpass(recording: Recording,
             freq: float,
-            channels: Sequence[str] = None) -> Recording:
+            channels: Sequence[str] = None,
+            order: int = 2) -> Recording:
     """Lowpass filter.
-
-    Uses a forward-backward Butterworth of order 2 (effective order 4).
 
     Parameters
     ----------
@@ -53,6 +57,11 @@ def lowpass(recording: Recording,
     channels : Sequence[str], optional
         The channels that must be filtered. If `None`, the filter will be
         applied to all channels.
+    order : int
+        Order of the Butterworth filter that will be used. The filtering is
+        done in a forward-backward manner, so the resulting effective order
+        will be the the double of this value. Default to 2, corresponding to an
+        effective order 4.
 
     Returns
     -------
@@ -63,7 +72,7 @@ def lowpass(recording: Recording,
         channels = recording.channels
     rec = recording.copy()
     Wn = freq / (0.5 * rec.frequency)
-    sos = ss.butter(2, Wn, btype='lowpass', output='sos')
+    sos = ss.butter(order, Wn, btype='lowpass', output='sos')
     values = rec.data.loc[:, channels].values
     rec.data.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
     return rec
@@ -71,10 +80,9 @@ def lowpass(recording: Recording,
 
 def highpass(recording: Recording,
              freq: float,
-             channels: Sequence[str] = None) -> Recording:
+             channels: Sequence[str] = None,
+             order: int = 2) -> Recording:
     """Highpass filter.
-
-    Uses a forward-backward Butterworth of order 2 (effective order 4).
 
     Parameters
     ----------
@@ -85,6 +93,11 @@ def highpass(recording: Recording,
     channels : Sequence[str], optional
         The channels that must be filtered. If `None`, the filter will be
         applied to all channels.
+    order : int
+        Order of the Butterworth filter that will be used. The filtering is
+        done in a forward-backward manner, so the resulting effective order
+        will be the the double of this value. Default to 2, corresponding to an
+        effective order 4.
 
     Returns
     -------
@@ -95,7 +108,7 @@ def highpass(recording: Recording,
         channels = recording.channels
     rec = recording.copy()
     Wn = freq / (0.5 * rec.frequency)
-    sos = ss.butter(2, Wn, btype='highpass', output='sos')
+    sos = ss.butter(order, Wn, btype='highpass', output='sos')
     values = rec.data.loc[:, channels].values
     rec.data.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
     return rec
