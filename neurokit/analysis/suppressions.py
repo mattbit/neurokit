@@ -128,7 +128,7 @@ class SuppressionAnalyzer:
         threshold = 8 * rms_after / rms_before
         alpha_mask = _detect_suppressions(filtered, threshold=threshold)
         if self._ies_mask is None:
-            self._ies_mask = _detect_suppressions(self._recording)
+            self._ies_mask = _detect_suppressions(self._recording, min_duration=2.5)
         alpha_mask[self._ies_mask] = False
         intervals = mask_to_intervals(alpha_mask, self._recording.data.index)
         detections = [{'start': start,
