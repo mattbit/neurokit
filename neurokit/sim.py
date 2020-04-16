@@ -4,8 +4,10 @@ import pandas as pd
 from .io import Recording
 
 
-def simulated_eeg_signal(duration, frequency=250, amplitude=40):
+def simulated_eeg_signal(duration, frequency=250, amplitude=40, theta=2):
     """Create a synthetic EEG-like signal.
+
+    The signal power is distributed as 1/f^θ
 
     Parameters
     ----------
@@ -15,6 +17,8 @@ def simulated_eeg_signal(duration, frequency=250, amplitude=40):
         Sampling frequency in Hz. Default is 250 Hz.
     amplitude : float
         Mean amplitude of the signal.
+    theta : float
+        Power decay with frequency, as 1/f^θ.
 
     Returns
     -------
@@ -25,7 +29,7 @@ def simulated_eeg_signal(duration, frequency=250, amplitude=40):
     freqs = np.fft.rfftfreq(ts.size, 1 / frequency)
 
     with np.errstate(divide='ignore'):
-        freq_signal = 1 / freqs**np.random.normal(1, 0.1)
+        freq_signal = 1 / freqs**(0.5 * theta * np.random.normal(1, 0.05))
 
     freq_signal[0] = 0
 
@@ -39,7 +43,7 @@ def simulated_eeg_signal(duration, frequency=250, amplitude=40):
 
 
 def simulated_eeg_recording(channels=2, duration=60, frequency=250,
-                            amplitude=80):
+                            amplitude=80, theta=2):
     """Create a synthetic EEG-like recording.
 
     Parameters
@@ -52,13 +56,15 @@ def simulated_eeg_recording(channels=2, duration=60, frequency=250,
         Sampling frequency in Hz. Default is 250 Hz.
     amplitude : float
         Mean amplitude value of the signal.
+    theta : float
+        Power decay with frequency, as 1/f^θ.
     """
     if isinstance(channels, int):
         channels = [f'EEG_{i+1}' for i in range(channels)]
 
     _data = {}
     for channel in channels:
-        ts, sig = simulated_eeg_signal(duration, frequency, amplitude)
+        ts, sig = simulated_eeg_signal(duration, frequency, amplitude, theta)
         _data[channel] = sig
 
     times = pd.to_datetime('now') + pd.to_timedelta(ts, unit='s')
