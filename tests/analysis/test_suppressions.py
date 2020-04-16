@@ -27,7 +27,7 @@ def test_detect_suppressions():
     # We must start with no suppressions
     analyzer = SuppressionAnalyzer(rec)
     detections = analyzer.detect_ies(min_duration=1.)
-    print(detections)
+
     assert len(detections) == 0
 
     # Add suppressions
@@ -38,7 +38,7 @@ def test_detect_suppressions():
     ts = (rec.data.index - rec.start_date).total_seconds()
     analyzer = SuppressionAnalyzer(rec)
     detections = analyzer.detect_ies()
-    print(detections)
+
     assert len(detections) == 2
 
     detections.loc[:, ('start', 'end')] -= rec.start_date
@@ -128,6 +128,23 @@ def test_detect_alpha_suppressions():
     assert 2 <= det_0_end <= 2.75
     assert 4 <= det_1_start <= 4.75
     assert 5.5 <= det_1_end <= 6.25
+
+
+def test_no_ies_as_alpha():
+    rec = simulated_eeg_recording(1, duration=10, frequency=100)
+    rec = rec.filter(0.5, None)
+    ts = (rec.data.index - rec.start_date).total_seconds()
+    alpha_band = 60 * np.cos(2 * np.pi * 9.8 * ts)
+    rec.data.loc[:, 'EEG_1'] += alpha_band
+    rec.data.iloc[200:350] = 0
+    analyzer = SuppressionAnalyzer(rec)
+    ies_detections = analyzer.detect_ies()
+
+    # should contain 1 ies suppression
+    assert len(ies_detections) == 1
+    alpha_detections = analyzer.detect_alpha_suppressions()
+    # should contain no alpha suppressions
+    assert len(alpha_detections) == 0
 
 
 def test_artifacts():
