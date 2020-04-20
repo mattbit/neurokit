@@ -17,8 +17,7 @@ import plotly.io
 
 from neurokit.preprocessing import (HighAmplitudeDetector,
                                     ConstantSignalDetector)
-from neurokit.analysis.suppressions import (detect_suppressions,
-                                            detect_alpha_suppressions)
+from neurokit.analysis.suppressions import SuppressionAnalyzer
 
 plotly.io.templates.default = 'plotly_white'
 
@@ -96,8 +95,9 @@ for artifact in rec.artifacts.itertuples():
              'y0': 1 - 0.25 * n_ch - pad, 'y1': 1 - 0.25 * (n_ch + 1) + pad}
     fig.add_shape(shape)
 
-
-alpha_sup = detect_alpha_suppressions(rec)
+analyzer = SuppressionAnalyzer(rec)
+isoel_sup = analyzer.detect_ies()
+alpha_sup = analyzer.detect_alpha_suppressions()
 for sup in alpha_sup.itertuples():
     for n in range(4):
         shape = {'type': 'rect', 'xref': 'x', 'yref': 'paper', 'layer': 'below',
@@ -107,7 +107,6 @@ for sup in alpha_sup.itertuples():
         fig.add_shape(shape)
 
 
-isoel_sup = detect_suppressions(rec)
 for sup in isoel_sup.itertuples():
     for n in range(4):
         shape = {'type': 'rect', 'xref': 'x', 'yref': 'paper', 'layer': 'below',
