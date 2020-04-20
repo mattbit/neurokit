@@ -158,10 +158,10 @@ class SuppressionAnalyzer:
                 self.recording, min_duration=2.5)
 
         rec = self.recording.copy()
-        rec.data[self._ies_mask] = np.nan
         alpha_mask = _detect_alpha_suppressions(
             rec, channels, frequency_band)
 
+        alpha_mask[self._ies_mask] = False
         intervals = mask_to_intervals(alpha_mask, self.recording.data.index)
         detections = [{'start': start,
                        'end': end,
