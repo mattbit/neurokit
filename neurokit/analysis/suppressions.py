@@ -82,7 +82,8 @@ def _find_threshold(data: pd.DataFrame, threshold: float = 8.):
 def _detect_alpha_suppressions(
     recording: Recording,
     channels: Sequence = None,
-    frequency_band: Tuple[float, float] = (8., 16.)
+    frequency_band: Tuple[float, float] = (8., 16.),
+    threshold: float = None
 ):
     """Extract Alpha Suppression from recording.
 
@@ -95,6 +96,8 @@ def _detect_alpha_suppressions(
     frequency_band: tuple[float, float]
         The frequency band used for the detection, in the form
         `(min_freq, max_freq)`. Default is `(8, 16)`.
+    threshold: float
+        Absolute threshold for the alpha detection.
 
     Returns
     -------
@@ -106,9 +109,10 @@ def _detect_alpha_suppressions(
     rec = recording.copy()
     rec.data = recording.data.loc[:, channels]
     filtered = bandpass(rec, frequency_band)
-    rms_before = np.sqrt(np.mean(rec.data.values**2))
-    rms_after = np.sqrt(np.mean(filtered.data.values**2))
-    threshold = 8 * rms_after / rms_before
+    if threshold is None:
+        rms_before = np.sqrt(np.mean(rec.data.values**2))
+        rms_after = np.sqrt(np.mean(filtered.data.values**2))
+        threshold = 8 * rms_after / rms_before
 
     return _detect_suppressions(filtered, threshold=threshold)
 
@@ -124,7 +128,8 @@ class SuppressionAnalyzer:
 
     def detect_ies(self, **kwargs):
         self._ies_mask = _detect_suppressions(self.recording, **kwargs)
-        intervals = mask_to_intervals(self._ies_mask, self.recording.data.index)
+        intervals = mask_to_intervals(
+            self._ies_mask, self.recording.data.index)
         detections = [{'start': start,
                        'end': end,
                        'channel': None,
@@ -136,17 +141,24 @@ class SuppressionAnalyzer:
     def detect_alpha_suppressions(
             self,
             channels: Sequence = None,
-            frequency_band: Tuple[float, float] = (8., 16.)
+            frequency_band: Tuple[float, float] = (8., 16.),
+            threshold: float = None,
+            min_duration: float = 1.
     ):
         """Extract Alpha Suppression from Recording.
 
         Parameters
         ----------
-        channels: Sequence
+        channels : Sequence
             The channels to consider when calculating α-suppressions.
-        frequency_band: tuple[float, float]
+        frequency_band : tuple[float, float]
             The frequency band used for the detection, in the form
             `(min_freq, max_freq)`. Default is `(8, 16)`.
+        threshold : float
+            Absolute threshold for the alpha detection.
+        min_duration : float
+            Minimum duration in seconds of a detection. Shorter detections will
+            be discarded.
 
         Returns
         -------
@@ -162,6 +174,9 @@ class SuppressionAnalyzer:
             rec, channels, frequency_band)
 
         alpha_mask[self._ies_mask] = False
+        min_length = math.ceil(min_duration * rec.frequency)
+        alpha_mask = binary_opening(alpha_mask, np.ones(min_length))
+
         intervals = mask_to_intervals(alpha_mask, self.recording.data.index)
         detections = [{'start': start,
                        'end': end,
