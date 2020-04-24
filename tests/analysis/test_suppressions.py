@@ -48,7 +48,7 @@ def test_detect_suppressions():
     # Detection may start earlier and finish later than expected because of the
     # randomness of the signal, but they cannot start later or finish earlier.
     assert ts[0] <= detections.loc[0].start <= ts[101]
-    assert ts[249] <= detections.loc[0].end <= ts[350]
+    assert ts[248] <= detections.loc[0].end <= ts[350]
     assert ts[360] <= detections.loc[1].start <= ts[501]
 
     detections = analyzer.detect_ies(min_duration=0.5)
@@ -58,14 +58,14 @@ def test_detect_suppressions():
 
     assert len(detections) == 3
     assert ts[200] <= detections.loc[1].start <= ts[301]
-    assert ts[359] <= detections.loc[1].end <= ts[460]
+    assert ts[358] <= detections.loc[1].end <= ts[460]
 
     # import matplotlib.pyplot as plt
     # plt.plot(ts, rec.data.EEG_1)
     # plt.hlines([-1.5, 1.5], 0, 10, lw=1)
     # plt.vlines([1, 2.50, 3, 3.6, 5, 8], -50, 50, color='r')
     # plt.ylim(-5, 5)
-    detections = analyzer.detect_ies(min_duration=1.49)
+    detections = analyzer.detect_ies(min_duration=1.48)
     assert len(detections) == 2
 
     detections = analyzer.detect_ies(threshold=1.5, min_duration=1.)
@@ -75,7 +75,7 @@ def test_detect_suppressions():
 
     assert 1 <= len(detections) <= 2
     assert ts[0] <= detections.loc[0].start <= ts[101]
-    assert ts[249] <= detections.loc[0].end <= ts[350]
+    assert ts[248] <= detections.loc[0].end <= ts[350]
 
 
 @pytest.mark.repeat(10)
