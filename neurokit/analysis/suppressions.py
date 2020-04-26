@@ -7,7 +7,7 @@ import math
 import numpy as np
 import pandas as pd
 from typing import Sequence, Tuple
-from scipy.ndimage.morphology import binary_opening, binary_dilation, binary_erosion
+from scipy.ndimage.morphology import binary_dilation, binary_erosion
 from scipy.signal import savgol_filter
 
 from ..io import Recording
@@ -19,7 +19,7 @@ def _detect_suppressions(recording: Recording,
                          channels: Sequence = None,
                          threshold: float = None,
                          min_duration: float = 1.,
-                         min_gap: float = None):
+                         min_gap: float = 0.):
     """Detect iso-electric suppressions in a Recording.
 
     The detection procedure is based on the method presented in [1]_.
@@ -51,6 +51,8 @@ def _detect_suppressions(recording: Recording,
     if not channels:
         channels = recording.channels
 
+    assert min_duration <= 0, 'min_duration should be > 0'
+
     rec = recording.artifacts_to_nan()
     if threshold is None:
         threshold = _find_threshold(rec.data.loc[:, channels])
@@ -59,13 +61,12 @@ def _detect_suppressions(recording: Recording,
     with np.errstate(invalid='ignore'):
         ies_mask = envelope < threshold
     min_length = math.floor(min_duration * rec.frequency)
-    if min_gap is None:
-        ies_mask = binary_opening(ies_mask, np.ones(min_length))
-    else:
+    dilate_len = math.floor((min_duration+min_gap)*rec.frequency)
+    ies_mask = binary_erosion(ies_mask, np.ones(min_length))
+    ies_mask = binary_dilation(ies_mask, np.ones(dilate_len))
+
+    if min_gap > 0:
         gap_len = math.floor(min_gap*rec.frequency)
-        dilate_len = math.floor((min_duration+min_gap)*rec.frequency)
-        ies_mask = binary_erosion(ies_mask, np.ones(min_length))
-        ies_mask = binary_dilation(ies_mask, np.ones(dilate_len))
         ies_mask = binary_erosion(ies_mask, np.ones(gap_len))
     return ies_mask
 
