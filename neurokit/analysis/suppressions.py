@@ -51,7 +51,8 @@ def _detect_suppressions(recording: Recording,
     if not channels:
         channels = recording.channels
 
-    assert min_duration <= 0, 'min_duration should be > 0'
+    if min_duration <= 0:
+        raise Exception('min_duration should be > 0')
 
     rec = recording.artifacts_to_nan()
     if threshold is None:
