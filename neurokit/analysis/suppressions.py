@@ -12,7 +12,7 @@ from scipy.signal import savgol_filter
 
 from ..core import Recording
 from ..utils import mask_to_intervals
-from ..preprocessing.filters import bandpass
+from ..signal.filters import bandpass
 
 
 def _detect_suppressions(recording: Recording,
@@ -147,7 +147,8 @@ class SuppressionAnalyzer:
 
     def detect_ies(self, **kwargs):
         self._ies_mask = _detect_suppressions(self.recording, **kwargs)
-        intervals = mask_to_intervals(self._ies_mask, self.recording.data.index)
+        intervals = mask_to_intervals(
+            self._ies_mask, self.recording.data.index)
         detections = [{'start': start,
                        'end': end,
                        'channel': None,
