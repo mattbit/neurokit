@@ -66,6 +66,7 @@ def _detect_suppressions(recording: Recording,
         ies_mask = envelope < threshold
     min_length = math.floor(min_duration * rec.frequency)
     dilate_len = math.floor((min_duration+min_gap)*rec.frequency)
+    gap_len = math.floor(min_gap * rec.frequency)
 
     if min_length > 0:
         ies_mask = binary_erosion(ies_mask, np.ones(min_length))
@@ -73,9 +74,9 @@ def _detect_suppressions(recording: Recording,
     if dilate_len > 0:
         ies_mask = binary_dilation(ies_mask, np.ones(dilate_len))
 
-    if min_gap > 0:
-        gap_len = math.floor(min_gap*rec.frequency)
+    if gap_len > 0:
         ies_mask = binary_erosion(ies_mask, np.ones(gap_len))
+
     return ies_mask
 
 
