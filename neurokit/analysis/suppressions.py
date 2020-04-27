@@ -7,7 +7,8 @@ import math
 import numpy as np
 import pandas as pd
 from typing import Sequence, Tuple
-from scipy.ndimage.morphology import binary_opening
+from scipy.ndimage.morphology import binary_dilation, binary_erosion
+from scipy.signal import savgol_filter
 
 from ..io import Recording
 from ..utils import mask_to_intervals
@@ -17,7 +18,8 @@ from ..preprocessing.filters import bandpass
 def _detect_suppressions(recording: Recording,
                          channels: Sequence = None,
                          threshold: float = None,
-                         min_duration: float = 1.):
+                         min_duration: float = 1.,
+                         min_gap: float = 0.):
     """Detect iso-electric suppressions in a Recording.
 
     The detection procedure is based on the method presented in [1]_.
@@ -32,6 +34,8 @@ def _detect_suppressions(recording: Recording,
         The threshold value.
     min_duration: float, optional
         Minimum duration of a suppression in seconds.
+    min_gap: float, optional
+        Minimum duration to fill gaps in the suppressions.
 
     Returns
     -------
@@ -47,14 +51,32 @@ def _detect_suppressions(recording: Recording,
     if not channels:
         channels = recording.channels
 
+    if min_duration < 0:
+        raise ValueError('min_duration should be >= 0')
+
+    if min_gap < 0:
+        raise ValueError('min_gap should be >= 0')
+
     rec = recording.artifacts_to_nan()
     if threshold is None:
         threshold = _find_threshold(rec.data.loc[:, channels])
     envelope = rec.data.loc[:, channels].abs().values.max(axis=1)
-    min_length = math.ceil(min_duration * rec.frequency)
+    envelope = savgol_filter(envelope, 3, 1)
     with np.errstate(invalid='ignore'):
         ies_mask = envelope < threshold
-    ies_mask = binary_opening(ies_mask, np.ones(min_length))
+    min_length = math.floor(min_duration * rec.frequency)
+    dilate_len = math.floor((min_duration+min_gap)*rec.frequency)
+    gap_len = math.floor(min_gap * rec.frequency)
+
+    if min_length > 0:
+        ies_mask = binary_erosion(ies_mask, np.ones(min_length))
+
+    if dilate_len > 0:
+        ies_mask = binary_dilation(ies_mask, np.ones(dilate_len))
+
+    if gap_len > 0:
+        ies_mask = binary_erosion(ies_mask, np.ones(gap_len))
+
     return ies_mask
 
 
