@@ -1,27 +1,63 @@
 from __future__ import annotations
 
 import pandas as pd
+from pandas.api.types import is_timedelta64_dtype
 
 
 class EventSeries:
     """A frame of events."""
+    __cols = ['start', 'end', 'channel', 'code', 'description']
+    __index = ['start', 'end']
 
-    def __init__(self, name=None):
+    def __init__(self, data, name=None):
         self.name = name
-        self.data = pd.DataFrame(
-            columns=['id', 'start', 'end', 'channel', 'description'])
-        self.data = self.data.set_index('start', drop=False)
+        self.data = pd.DataFrame(data, columns=EventSeries.__cols)
 
-    def add(self, start, end=None, channel=None, description=None):
-        self.data.append({
-            'start': start,
-            'end': end,
-            'channels': channel,
-            'description': description,
-        })
+        if not is_timedelta64_dtype(self.data['start']):
+            self.data['start'] = pd.to_timedelta(self.data['start'], unit='s')
+        if not is_timedelta64_dtype(self.data['end']):
+            self.data['end'] = pd.to_timedelta(self.data['end'], unit='s')
+
+        self.data = self.data.set_index(
+            EventSeries.__index, drop=False).sort_index()
+
+    def add(self, start, end=None, channel=None, code=None, description=None):
+        if not isinstance(start, pd.Timedelta):
+            start = pd.to_timedelta(start, unit='s')
+        if not isinstance(end, pd.Timedelta):
+            end = pd.to_timedelta(end, unit='s')
+
+        event = pd.Series(data=[start, end, channel, code, description],
+                          index=EventSeries.__cols,
+                          name=(start, end))
+        self.data = self.data.append(event, ignore_index=False).sort_index()
+
+    def channel(self, *channels):
+        data = self.data[self.data.channel.isin(channels)].copy()
+        return EventSeries(data, name=self.name)
+
+    def __iter__(self):
+        return self.data.itertuples()
 
     def __repr__(self):
         return f"<Events '{self.name}' ({len(self.data)} events)>"
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            start, stop = key.start, key.stop
+            if not isinstance(start, pd.Timedelta):
+                start = pd.to_timedelta(start, unit='s')
+            if not isinstance(stop, pd.Timedelta):
+                stop = pd.to_timedelta(stop, unit='s')
+
+            data = self.data.loc[(None, start):(stop, None):key.step]
+
+            return EventSeries(data, name=self.name)
+
+        return self.data.loc[key]
 
 
 class TimeSeries(pd.DataFrame):

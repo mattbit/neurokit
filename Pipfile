@@ -24,6 +24,8 @@ pywavelets = "*"
 networkx = "*"
 fastparquet = "*"
 plotly = "*"
+flatbuffers = "*"
+msgpack = "*"
 
 [requires]
 python_version = "3.7"
