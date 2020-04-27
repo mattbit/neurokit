@@ -54,6 +54,9 @@ def _detect_suppressions(recording: Recording,
     if min_duration < 0:
         raise ValueError('min_duration should be >= 0')
 
+    if min_gap < 0:
+        raise ValueError('min_gap should be >= 0')
+
     rec = recording.artifacts_to_nan()
     if threshold is None:
         threshold = _find_threshold(rec.data.loc[:, channels])
@@ -66,6 +69,8 @@ def _detect_suppressions(recording: Recording,
 
     if min_length > 0:
         ies_mask = binary_erosion(ies_mask, np.ones(min_length))
+
+    if dilate_len > 0:
         ies_mask = binary_dilation(ies_mask, np.ones(dilate_len))
 
     if min_gap > 0:
