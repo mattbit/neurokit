@@ -3,7 +3,7 @@ import pandas as pd
 from collections.abc import Sequence
 from operator import attrgetter
 
-from .model import Recording
+from ..core import Recording
 from ..utils import mask_to_intervals
 
 

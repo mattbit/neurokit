@@ -10,7 +10,7 @@ from typing import Sequence, Tuple
 from scipy.ndimage.morphology import binary_dilation, binary_erosion
 from scipy.signal import savgol_filter
 
-from ..io import Recording
+from ..core import Recording
 from ..utils import mask_to_intervals
 from ..preprocessing.filters import bandpass
 

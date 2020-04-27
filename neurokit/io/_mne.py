@@ -1,6 +1,6 @@
 import mne
 import pandas as pd
-from .model import Recording
+from ..core import Recording
 
 
 def _recording_from_mne_raw(raw: mne.io.Raw):

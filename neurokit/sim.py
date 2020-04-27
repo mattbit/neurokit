@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from .io import Recording
+from .core import Recording
 
 
 def simulated_eeg_signal(duration, frequency=250, amplitude=40, theta=2):

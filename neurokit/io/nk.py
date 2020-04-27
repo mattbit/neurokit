@@ -6,7 +6,7 @@ import tempfile
 import fastparquet
 import pandas as pd
 
-from .model import Recording
+from ..core import Recording
 
 
 def read_nkr(filename):
