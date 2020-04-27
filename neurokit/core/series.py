@@ -62,10 +62,11 @@ class EventSeries:
 
 class TimeSeries(pd.DataFrame):
     """"""
-    _metadata = ['name']
+    _metadata = ['name', 'filters']
 
     def __init__(self, *args, **kwargs):
         self.name = kwargs.pop('name', None)
+        self.filters = kwargs.pop('filters', {})
         frequency = kwargs.pop('frequency', None)
         offset = kwargs.pop('offset', 0.)
         super().__init__(*args, **kwargs)
@@ -89,7 +90,7 @@ class TimeSeries(pd.DataFrame):
 
     @property
     def frequency(self):
-        return (len(self) - 1) / self.duration.total_seconds()
+        return round((len(self) - 1) / self.duration.total_seconds(), 9)
 
     @property
     def channels(self):

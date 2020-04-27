@@ -1,11 +1,11 @@
 from unittest import TestCase
-
+from pytest import approx
 from neurokit.io import edf
+import mne
 
 
-class TestEDF(TestCase):
-    def test_read_edf(self):
-        rec = edf.read_edf('tests/data/test.edf')
-        self.assertEqual(rec.frequency, 100)
-        self.assertEqual(len(rec.channels), 1)
-        self.assertEqual(rec.channels[0], 'Calibration')
+def test_read_edf(self):
+    rec = edf.read_edf('tests/data/test.edf')
+    assert rec.data.frequency == 100
+    assert len(rec.data.channels) == 1
+    assert rec.data.channels[0] == 'Calibration'

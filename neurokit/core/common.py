@@ -12,6 +12,9 @@ class NamedItemsBag:
     def __getattr__(self, name):
         return self._items[name]
 
+    def __getitem__(self, name):
+        return self._items[name]
+
     def __repr__(self):
         names = self._items.keys()
         if len(names) > 4:
@@ -26,9 +29,12 @@ class NamedItemsBag:
             yield item
 
     def add(self, item):
+        if item.name is None:
+            raise ValueError(f'Cannot add an item with no name.')
         if item.name in self._items:
             raise ValueError(f'Cannot add duplicate item `{item.name}`.')
         if self.dtype and not isinstance(item, self.dtype):
             raise TypeError(
                 f'Item `{item.name}` is not a valid `{self.dtype}` instance.')
+
         self._items[item.name] = item

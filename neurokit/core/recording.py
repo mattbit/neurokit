@@ -166,7 +166,7 @@ class Recording:
                          meta=deepcopy(self.meta, memo))
 
     def __repr__(self):
-        return f"<Recording '{self.id}' ({len(self.series)} series)>"
+        return f"<Recording '{self.name}' ({len(self.ts)} series)>"
 
     def __getattr__(self, name):
         return self.ts[name]
