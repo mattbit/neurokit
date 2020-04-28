@@ -58,11 +58,12 @@ class Recording:
         self.name = name
         self.meta = meta or {}
         self.patient = patient or Patient()
+        timeseries = list(timeseries) if timeseries is not None else []
 
         if data is not None:
             if not isinstance(data, TimeSeries):
                 data = TimeSeries(data, name='data')
-            timeseries = [data] + list(timeseries)
+            timeseries = [data] + timeseries
 
         if not timeseries:
             raise ValueError('At least a timeseries is required.')
@@ -124,8 +125,7 @@ class Recording:
             artifacted signal for the main series.
         """
         if isinstance(series, str):
-            series = self.es[str]
-
+            series = self.es[series]
         rec = self.copy()
         dt = pd.Timedelta(pad, unit='s')
         for artifact in series:
@@ -152,16 +152,16 @@ class Recording:
         return write_nkr(self, filename, **kwargs)
 
     def __copy__(self):
-        return Recording(id_=self.name,
-                         series=self.series,
-                         events=self.events,
+        return Recording(name=self.name,
+                         timeseries=self.ts,
+                         events=self.es,
                          patient=self.patient,
                          meta=self.meta)
 
     def __deepcopy__(self, memo=None):
-        return Recording(id_=deepcopy(self.name, memo),
-                         series=deepcopy(self.series, memo),
-                         events=deepcopy(self.events, memo),
+        return Recording(name=deepcopy(self.name, memo),
+                         timeseries=deepcopy(self.ts, memo),
+                         events=deepcopy(self.es, memo),
                          patient=deepcopy(self.patient, memo),
                          meta=deepcopy(self.meta, memo))
 
@@ -169,7 +169,10 @@ class Recording:
         return f"<Recording '{self.name}' ({len(self.ts)} series)>"
 
     def __getattr__(self, name):
-        return self.ts[name]
+        try:
+            return self.ts[name]
+        except KeyError:
+            raise AttributeError()
 
     def __getitem__(self, name):
         return self.ts[name]

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import pandas as pd
+from copy import deepcopy
 from pandas.api.types import is_timedelta64_dtype
+
+from .indexing import FixedTimedeltaIndex, timedelta_range
 
 
 class EventSeries:
@@ -9,9 +12,10 @@ class EventSeries:
     __cols = ['start', 'end', 'channel', 'code', 'description']
     __index = ['start', 'end']
 
-    def __init__(self, data, name=None):
+    def __init__(self, data=None, name=None):
         self.name = name
-        self.data = pd.DataFrame(data, columns=EventSeries.__cols)
+        self.data = pd.DataFrame([] if data is None else data,
+                                 columns=EventSeries.__cols)
 
         if not is_timedelta64_dtype(self.data['start']):
             self.data['start'] = pd.to_timedelta(self.data['start'], unit='s')
@@ -35,6 +39,18 @@ class EventSeries:
     def channel(self, *channels):
         data = self.data[self.data.channel.isin(channels)].copy()
         return EventSeries(data, name=self.name)
+
+    def copy(self, deep=True):
+        if not deep:
+            return self.__copy__()
+
+        return self.__deepcopy__()
+
+    def __copy__(self):
+        return EventSeries(self.data, self.name)
+
+    def __deepcopy__(self, memo=None):
+        return EventSeries(deepcopy(self.data), deepcopy(self.name))
 
     def __iter__(self):
         return self.data.itertuples()
@@ -73,16 +89,18 @@ class TimeSeries(pd.DataFrame):
 
         if frequency:
             period_ns = f'{round(1e9 / frequency)}N'
-            self.index = pd.timedelta_range(
+            self.index = timedelta_range(
                 start=0, freq=period_ns, periods=self.shape[0])
         elif not isinstance(self.index, pd.TimedeltaIndex):
             raise ValueError('A TimedeltaIndex must be defined '
                              + 'or a frequency must be specified')
+        elif not isinstance(self.index, FixedTimedeltaIndex):
+            self.index = FixedTimedeltaIndex(self.index)
 
         if not isinstance(offset, pd.Timedelta):
             offset = pd.Timedelta(offset, unit='s')
 
-        self.index += offset
+        # self.index += offset
 
     @property
     def _constructor(self):

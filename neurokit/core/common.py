@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Sequence
 
 
@@ -27,6 +28,19 @@ class NamedItemsBag:
     def __iter__(self):
         for item in self._items.values():
             yield item
+
+    def __copy__(self):
+        return NamedItemsBag(self.data, self.dtype)
+
+    def __deepcopy__(self, memo=None):
+        items = [deepcopy(item) for item in self._items.values()]
+        return NamedItemsBag(items, self.dtype)
+
+    def copy(self, deep=True):
+        if not deep:
+            return self.__copy__()
+
+        return self.__deepcopy__()
 
     def add(self, item):
         if item.name is None:

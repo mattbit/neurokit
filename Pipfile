@@ -14,7 +14,6 @@ neurokit = {editable = true,path = "."}
 [packages]
 numpy = "*"
 scipy = "*"
-pandas = "*"
 mne = "*"
 pyedflib = "*"
 dateparser = "*"
@@ -26,6 +25,8 @@ fastparquet = "*"
 plotly = "*"
 flatbuffers = "*"
 msgpack = "*"
+numba = "==0.48.0"
+pandas = "*"
 
 [requires]
 python_version = "3.7"
