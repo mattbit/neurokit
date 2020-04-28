@@ -119,7 +119,7 @@ class TimeSeries(pd.DataFrame):
         return self.index[-1] - self.index[0]
 
     def filter(self, low: float, high: float = None, **kwargs) -> TimeSeries:
-        from ..preprocessing import filters
+        from ..signal import filters
         if not low:
             return filters.lowpass(self, high, **kwargs)
 

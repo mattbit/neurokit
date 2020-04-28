@@ -10,11 +10,17 @@ class NamedItemsBag:
         for item in items:
             self.add(item)
 
+    def has(self, name):
+        return name in self._items.keys()
+
     def __getattr__(self, name):
         return self._items[name]
 
     def __getitem__(self, name):
         return self._items[name]
+
+    def __setitem__(self, name, item):
+        self._items[name] = item
 
     def __repr__(self):
         names = self._items.keys()
