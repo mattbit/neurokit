@@ -7,7 +7,7 @@ import math
 import numpy as np
 import pandas as pd
 from typing import Sequence, Tuple
-from scipy.ndimage.morphology import binary_dilation, binary_erosion
+from scipy.ndimage.morphology import binary_dilation, binary_erosion, binary_opening
 from scipy.signal import savgol_filter
 
 from ..io import Recording
@@ -193,7 +193,7 @@ class SuppressionAnalyzer:
 
         rec = self.recording.copy()
         alpha_mask = _detect_alpha_suppressions(
-            rec, channels, frequency_band)
+            rec, channels, frequency_band, threshold)
 
         alpha_mask[self._ies_mask] = False
         min_length = math.ceil(min_duration * rec.frequency)
