@@ -69,6 +69,6 @@ def intervals_to_mask(intervals: Sequence[Tuple[Any, Any]],
         index = pd.Index(index)
 
     for start, end in intervals:
-        mask[index.get_loc(start):index.get_loc(end) + 1] = True
+        mask[index.get_loc(start, method='ffill'):index.get_loc(end, method='bfill') + 1] = True
 
     return mask
