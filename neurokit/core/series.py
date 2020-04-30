@@ -148,12 +148,12 @@ class TimeSeries(pd.DataFrame):
     def duration(self):
         return self.index[-1] - self.index[0]
 
-    def filter(
+    def filter(  # skipcq: PYL-W0221
             self,
             low: float,
             high: float = None,
             **kwargs
-    ) -> TimeSeries:  # skipcq: PYL-W0221
+    ) -> TimeSeries:
         from ..signal import filters
         if not low:
             return filters.lowpass(self, high, **kwargs)
