@@ -129,6 +129,10 @@ class TimeSeries(pd.DataFrame):
         return TimeSeries
 
     @property
+    def _constructor_expanddim(self):
+        return NotImplementedError("Not supported for TimeSeries!")
+
+    @property
     def frequency(self):
         return round((len(self) - 1) / self.duration.total_seconds(), 9)
 

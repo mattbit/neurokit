@@ -64,7 +64,5 @@ def _maybe_cast_to_fixed_timedelta(obj):
 
 
 def timedelta_range(*args, **kwargs):
-    """Equivalent of `pandas.timedelta_range` for a `FixedTimedeltaIndex`.
-
-    """
+    """Equivalent of `pandas.timedelta_range` for a `FixedTimedeltaIndex`."""
     return FixedTimedeltaIndex(pd.timedelta_range(*args, **kwargs))
