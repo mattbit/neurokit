@@ -2,7 +2,7 @@ import numpy as np
 import scipy.signal as ss
 from typing import Tuple, Sequence
 
-from ..core import TimeSeries
+from ..core.series import TimeSeries
 
 
 def bandpass(timeseries: TimeSeries,
