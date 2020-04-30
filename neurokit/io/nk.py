@@ -44,7 +44,6 @@ def read_nkr(filename):
 
     # Artifacts
     art_path = os.path.join(tmp, 'artifacts.parq')
-    artifacts = None
     if os.path.exists(art_path):
         artifacts = fastparquet.ParquetFile(art_path).to_pandas()
         artifacts.start = pd.to_datetime(artifacts.start)
@@ -53,7 +52,6 @@ def read_nkr(filename):
 
     # Annotations
     annots_path = os.path.join(tmp, 'annotations.parq')
-    annotations = None
     if os.path.exists(annots_path):
         annotations = fastparquet.ParquetFile(annots_path).to_pandas()
         annotations['start'] = pd.to_datetime(annotations['start'])
@@ -63,7 +61,7 @@ def read_nkr(filename):
     shutil.rmtree(tmp)
 
     return Recording(data, name=meta.get('id'), meta=meta,
-                     eventseries=eventseries)
+                     events=eventseries)
 
 
 def write_nkr(recording, filename):
