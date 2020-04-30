@@ -1,5 +1,4 @@
-from collections.abc import Sequence
-
+from typing import Sequence
 from ..core.recording import Recording
 
 
@@ -126,10 +125,3 @@ def split_in_segments(recording, min_break=300, trim=True):
     #     return [trim_empty(s) for s in segments]
     #
     # return segments
-
-
-def _ensure_sequence(obj):
-    if isinstance(obj, Sequence):
-        return obj
-
-    return [obj]
