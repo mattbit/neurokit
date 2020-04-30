@@ -67,7 +67,7 @@ def test_detect_suppressions():
 
     assert 1 <= len(detections) <= 2
     assert 0 * sec <= detections.loc[0].start <= 1.01 * sec
-    assert 2.49 * sec <= detections.loc[0].end <= 3.5 * sec
+    assert 2.48 * sec <= detections.loc[0].end <= 3.5 * sec
 
 
 @pytest.mark.repeat(10)
