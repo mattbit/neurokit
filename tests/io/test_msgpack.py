@@ -1,15 +1,15 @@
 import pandas as pd
 from tempfile import TemporaryFile
-from neurokit import sim, EventSeries
 
+import neurokit as nk
 from neurokit.io import msgpack
 
 
 def test_write_and_read_msgpack():
-    rec = sim.simulated_eeg_recording(pd.to_timedelta('10m').total_seconds(),
-                                      channels=['CH1', 'CH2!!!', 'CH$3'],
-                                      frequency=150)
-    annotations = EventSeries(name='annots')
+    rec = nk.sim.simulated_eeg_recording(pd.to_timedelta('10m').total_seconds(),
+                                         channels=['CH1', 'CH2!!!', 'CH$3'],
+                                         frequency=150)
+    annotations = nk.EventSeries(name='annots')
     annotations.add(0, 3.2, None, 'A1')
     rec.es.add(annotations)
 
