@@ -6,7 +6,8 @@ import tempfile
 import fastparquet
 import pandas as pd
 
-from ..core import Recording
+from ..core.series import EventSeries
+from ..core.recording import Recording
 
 
 def read_nkr(filename):
@@ -37,6 +38,9 @@ def read_nkr(filename):
     data_path = os.path.join(tmp, 'data.parq')
     data = fastparquet.ParquetFile(data_path).to_pandas()
     data.index = pd.to_datetime(data.index)
+    meta['date'] = data.index.min()
+
+    eventseries = []
 
     # Artifacts
     art_path = os.path.join(tmp, 'artifacts.parq')
@@ -45,6 +49,7 @@ def read_nkr(filename):
         artifacts = fastparquet.ParquetFile(art_path).to_pandas()
         artifacts.start = pd.to_datetime(artifacts.start)
         artifacts.end = pd.to_datetime(artifacts.end)
+        eventseries.append(EventSeries(artifacts, name='artifacts'))
 
     # Annotations
     annots_path = os.path.join(tmp, 'annotations.parq')
@@ -53,48 +58,14 @@ def read_nkr(filename):
         annotations = fastparquet.ParquetFile(annots_path).to_pandas()
         annotations['start'] = pd.to_datetime(annotations['start'])
         annotations['end'] = pd.to_datetime(annotations['end'])
+        eventseries.append(EventSeries(annotations, name='annotations'))
 
     shutil.rmtree(tmp)
 
-    return Recording(data, annotations=annotations, artifacts=artifacts,
-                     meta=meta)
+    return Recording(data, name=meta.get('id'), meta=meta,
+                     eventseries=eventseries)
 
 
 def write_nkr(recording, filename):
     """Write a Recording to a parquet file."""
-    tf = tarfile.open(filename, mode='w')
-    tmp = tempfile.mkdtemp(prefix='nk_tmp')
-
-    # Metadata
-    meta_path = os.path.join(tmp, 'meta.json')
-    with open(meta_path, 'w') as f:
-        json.dump(recording.meta, f)
-    tf.add(meta_path, 'meta.json')
-
-    # Data
-    data = recording.data.copy()
-    data.index = data.index.astype('int64')
-    data_path = os.path.join(tmp, 'data.parq')
-    fastparquet.write(data_path, data, compression='gzip')
-    del data
-    tf.add(data_path, 'data.parq')
-
-    # Artifacts
-    artifacts = recording.artifacts.copy()
-    artifacts.start = artifacts.start.astype('int64')
-    artifacts.end = artifacts.end.astype('int64')
-    art_path = os.path.join(tmp, 'artifacts.parq')
-    fastparquet.write(art_path, artifacts, compression='gzip')
-    tf.add(art_path, 'artifacts.parq')
-
-    # Annotations
-    annots = recording.annotations.copy()
-    annots['start'] = annots['start'].astype('int64')
-    annots['end'] = annots['end'].astype('int64')
-    annots_path = os.path.join(tmp, 'annotations.parq')
-    fastparquet.write(annots_path, annots, compression='gzip')
-    tf.add(annots_path, 'annotations.parq')
-
-    tf.close()
-
-    shutil.rmtree(tmp)
+    raise NotImplementedError('The nkr format has been deprecated.')

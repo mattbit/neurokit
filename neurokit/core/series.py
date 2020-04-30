@@ -148,7 +148,12 @@ class TimeSeries(pd.DataFrame):
     def duration(self):
         return self.index[-1] - self.index[0]
 
-    def filter(self, low: float, high: float = None, **kwargs) -> TimeSeries:
+    def filter(
+            self,
+            low: float,
+            high: float = None,
+            **kwargs
+    ) -> TimeSeries:  # skipcq: PYL-W0221
         from ..signal import filters
         if not low:
             return filters.lowpass(self, high, **kwargs)
@@ -158,7 +163,7 @@ class TimeSeries(pd.DataFrame):
 
         return filters.bandpass(self, (low, high), **kwargs)
 
-    def to_dict(self, **kwargs):
+    def to_dict(self, **kwargs):  # skipcq: PYL-W0221
         return {
             'name': self.name,
             'offset': self.offset,
@@ -168,7 +173,7 @@ class TimeSeries(pd.DataFrame):
         }
 
     @classmethod
-    def from_dict(cls, data, **kwargs):
+    def from_dict(cls, data, **kwargs):  # skipcq: PYL-W0221
         chs = data.get('channels', [])
         ch_names = [ch.get('name') for ch in chs]
         ch_data = np.array([ch.get('data') for ch in chs], dtype=np.float).T
