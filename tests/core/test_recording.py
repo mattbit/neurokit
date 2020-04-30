@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 from neurokit import EventSeries
 from neurokit.sim import simulated_eeg_recording
 

@@ -50,7 +50,7 @@ class NamedItemsBag:
 
     def add(self, item):
         if item.name is None:
-            raise ValueError(f'Cannot add an item with no name.')
+            raise ValueError('Cannot add an item with no name.')
         if item.name in self._items:
             raise ValueError(f'Cannot add duplicate item `{item.name}`.')
         if self.dtype and not isinstance(item, self.dtype):

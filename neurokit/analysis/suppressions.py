@@ -12,7 +12,6 @@ from scipy.signal import savgol_filter
 
 from ..core import Recording
 from ..utils import mask_to_intervals
-from ..signal.filters import bandpass
 
 
 def _detect_suppressions(recording: Recording,
