@@ -4,6 +4,7 @@ from . import preprocessing
 from . import utils
 from . import signal
 from . import vis
+from . import sim
 
 __all__ = [
     'io',
@@ -11,6 +12,7 @@ __all__ = [
     'utils',
     'signal',
     'vis',
+    'sim',
 
     'TimeSeries',
     'EventSeries',

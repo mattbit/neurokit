@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 from copy import deepcopy
 from pandas.api.types import is_timedelta64_dtype
@@ -45,6 +46,27 @@ class EventSeries:
             return self.__copy__()
 
         return self.__deepcopy__()
+
+    def to_dict(self):
+        events = [{'start': e.start,
+                   'end': e.end,
+                   'channel': e.channel,
+                   'code': e.code,
+                   'description': e.description}
+                  for e in self.data.itertuples()]
+
+        return {'name': self.name, 'events': events}
+
+    @classmethod
+    def from_dict(cls, data):
+        events = [e for e in data.get('events', [])]
+        for e in events:
+            if not isinstance(e['start'], pd.Timedelta):
+                e['start'] = pd.to_timedelta(e['start'], unit='ns')
+            if not isinstance(e['end'], pd.Timedelta):
+                e['end'] = pd.to_timedelta(e['end'], unit='ns')
+        df = pd.DataFrame(events, columns=cls.__cols)
+        return cls(data=df, name=data.get('name'))
 
     def __copy__(self):
         return EventSeries(self.data, self.name)
@@ -100,7 +122,7 @@ class TimeSeries(pd.DataFrame):
         if not isinstance(offset, pd.Timedelta):
             offset = pd.Timedelta(offset, unit='s')
 
-        # self.index += offset
+        self.index += offset
 
     @property
     def _constructor(self):
@@ -109,6 +131,10 @@ class TimeSeries(pd.DataFrame):
     @property
     def frequency(self):
         return round((len(self) - 1) / self.duration.total_seconds(), 9)
+
+    @property
+    def offset(self):
+        return self.index.min()
 
     @property
     def channels(self):
@@ -127,3 +153,27 @@ class TimeSeries(pd.DataFrame):
             return filters.highpass(self, low, **kwargs)
 
         return filters.bandpass(self, (low, high), **kwargs)
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'offset': self.offset,
+            'frequency': self.frequency,
+            'channels': [{'name': ch, 'data': self[ch].values}
+                         for ch in self.channels],
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        chs = data.get('channels', [])
+        ch_names = [ch.get('name') for ch in chs]
+        ch_data = np.array([ch.get('data') for ch in chs], dtype=np.float).T
+        offset = pd.to_timedelta(data.get('offset', 0), unit='ns')
+
+        return cls(
+            ch_data,
+            columns=ch_names,
+            name=data.get('name'),
+            frequency=data.get('frequency'),
+            offset=offset
+        )

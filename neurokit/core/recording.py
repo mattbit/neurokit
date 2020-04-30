@@ -20,13 +20,36 @@ class Patient:
         height: float = None,
         weight: float = None
     ):
-        self.id_ = id_
+        self.id = id_
         self.description = description
         self.name = name
         self.sex = sex
         self.age = age
         self.height = height
         self.weight = weight
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'description': self.description,
+            'name': self.name,
+            'sex': self.sex,
+            'age': self.age,
+            'height': self.height,
+            'weight': self.weight,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            id_=data.get('id'),
+            description=data.get('description'),
+            name=data.get('name'),
+            sex=data.get('sex'),
+            age=data.get('age'),
+            height=data.get('height'),
+            weight=data.get('weight'),
+        )
 
 
 class Recording:
@@ -140,6 +163,33 @@ class Recording:
         rec = self.copy()
         rec.data = rec.data.filter(*args, **kwargs)
         return rec
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'meta': self.meta,
+            'patient': self.patient.to_dict(),
+            'timeseries': [ts.to_dict() for ts in self.ts],
+            'events': [e.to_dict() for e in self.es],
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        name = data.get('name')
+        meta = data.get('meta', {})
+        patient = Patient.from_dict(data.get('patient', {}))
+        ts = [TimeSeries.from_dict(ts_data)
+              for ts_data in data.get('timeseries', [])]
+        es = [EventSeries.from_dict(es_data)
+              for es_data in data.get('events', [])]
+
+        return cls(
+            name=name,
+            timeseries=ts,
+            events=es,
+            patient=patient,
+            meta=meta,
+        )
 
     def to_edf(self, filename, **kwargs):
         from .edf import write_edf
