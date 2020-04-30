@@ -38,8 +38,6 @@ class FixedTimedeltaIndex(pd.TimedeltaIndex):
         -------
         label : object
         """
-        assert kind in ["ix", "loc", "getitem", None]
-
         if isinstance(label, str):
             return pd.Timedelta(label)
 
@@ -59,10 +57,14 @@ class FixedTimedeltaIndex(pd.TimedeltaIndex):
 
 
 def _maybe_cast_to_fixed_timedelta(obj):
-    if not isinstance(obj, FixedTimedeltaIndex) and isinstance(obj, pd.TimedeltaIndex):
+    if (not isinstance(obj, FixedTimedeltaIndex)
+            and isinstance(obj, pd.TimedeltaIndex)):
         return FixedTimedeltaIndex(obj)
     return obj
 
 
 def timedelta_range(*args, **kwargs):
+    """Equivalent of `pandas.timedelta_range` for a `FixedTimedeltaIndex`.
+
+    """
     return FixedTimedeltaIndex(pd.timedelta_range(*args, **kwargs))

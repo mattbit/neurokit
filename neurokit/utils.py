@@ -61,7 +61,7 @@ def intervals_to_mask(intervals: Sequence[Tuple[Any, Any]],
     -------
     mask : numpy.ndarray
         A booelan array with same length as the index, with `True` elements
-        inside the intervals (boundaries stricty included).
+        inside the intervals (boundaries strictly included).
     """
     mask = np.zeros(len(index), dtype=bool)
 

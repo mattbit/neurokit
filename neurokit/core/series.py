@@ -154,7 +154,7 @@ class TimeSeries(pd.DataFrame):
 
         return filters.bandpass(self, (low, high), **kwargs)
 
-    def to_dict(self):
+    def to_dict(self, **kwargs):
         return {
             'name': self.name,
             'offset': self.offset,
@@ -164,7 +164,7 @@ class TimeSeries(pd.DataFrame):
         }
 
     @classmethod
-    def from_dict(cls, data):
+    def from_dict(cls, data, **kwargs):
         chs = data.get('channels', [])
         ch_names = [ch.get('name') for ch in chs]
         ch_data = np.array([ch.get('data') for ch in chs], dtype=np.float).T
