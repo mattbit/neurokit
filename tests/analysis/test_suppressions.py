@@ -26,7 +26,7 @@ def test_detect_suppressions():
 
     # We must start with no suppressions
     analyzer = SuppressionAnalyzer(rec)
-    detections = analyzer.detect_ies(min_duration=1.)
+    detections = analyzer.detect_ies(min_duration=1., threshold=8.)
 
     assert len(detections) == 0
 
@@ -37,7 +37,7 @@ def test_detect_suppressions():
 
     ts = (rec.data.index - rec.start_date).total_seconds()
     analyzer = SuppressionAnalyzer(rec)
-    detections = analyzer.detect_ies()
+    detections = analyzer.detect_ies(threshold=8.)
 
     assert len(detections) == 2
 
@@ -51,7 +51,7 @@ def test_detect_suppressions():
     assert ts[248] <= detections.loc[0].end <= ts[350]
     assert ts[360] <= detections.loc[1].start <= ts[501]
 
-    detections = analyzer.detect_ies(min_duration=0.5)
+    detections = analyzer.detect_ies(min_duration=0.5, threshold=8.)
     detections.loc[:, ('start', 'end')] -= rec.start_date
     detections['start'] = detections['start'].dt.total_seconds()
     detections['end'] = detections['end'].dt.total_seconds()
@@ -65,7 +65,7 @@ def test_detect_suppressions():
     # plt.hlines([-1.5, 1.5], 0, 10, lw=1)
     # plt.vlines([1, 2.50, 3, 3.6, 5, 8], -50, 50, color='r')
     # plt.ylim(-5, 5)
-    detections = analyzer.detect_ies(min_duration=1.48)
+    detections = analyzer.detect_ies(min_duration=1.48, threshold=8.)
     assert len(detections) == 2
 
     detections = analyzer.detect_ies(threshold=1.5, min_duration=1.)
@@ -112,7 +112,7 @@ def test_detect_alpha_suppressions():
     analyzer = SuppressionAnalyzer(rec)
 
     # Ensure no iso-electric suppression is detected.
-    iso_elec_suppressions = analyzer.detect_ies()
+    iso_elec_suppressions = analyzer.detect_ies(threshold=8.)
     assert len(iso_elec_suppressions) == 0
 
     detections = analyzer.detect_alpha_suppressions(frequency_band=(7.5, 12.5))
@@ -138,7 +138,7 @@ def test_no_ies_as_alpha():
     rec.data.loc[:, 'EEG_1'] += alpha_band
     rec.data.iloc[200:350] = 0
     analyzer = SuppressionAnalyzer(rec)
-    ies_detections = analyzer.detect_ies()
+    ies_detections = analyzer.detect_ies(threshold=8.)
 
     # should contain 1 ies suppression
     assert len(ies_detections) == 1

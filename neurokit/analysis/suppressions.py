@@ -97,7 +97,8 @@ def _find_threshold(data: pd.DataFrame, threshold: float = 8.):
     """
     mean_amplitude = data.abs().mean().mean()
     if mean_amplitude < 30:
-        threshold = threshold / 1.25
+        rms_value = np.sqrt(np.nanmean(data.values ** 2))
+        threshold = rms_value * 1.25
     return threshold
 
 
