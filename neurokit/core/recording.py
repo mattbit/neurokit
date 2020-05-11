@@ -192,14 +192,27 @@ class Recording:
         )
 
     def to_edf(self, filename, **kwargs):
-        from .edf import write_edf
+        from ..io.edf import write_edf
 
         return write_edf(self, filename, **kwargs)
 
     def to_nkr(self, filename, **kwargs):
-        from neurokit.io.nk import write_nkr
+        from ..io.nk import write_nkr
 
         return write_nkr(self, filename, **kwargs)
+
+    def slice(self, start, end=None):
+        if start is not None and not isinstance(start, pd.Timedelta):
+            start = pd.to_timedelta(start, unit='s')
+        if end is not None and not isinstance(end, pd.Timedelta):
+            end = pd.to_timedelta(end, unit='s')
+
+        timeseries = NamedItemsBag([ts.loc[start:end] for ts in self.ts])
+        events = NamedItemsBag([es[start:end] for es in self.es])
+
+        return Recording(name=self.name, meta=self.meta, patient=self.patient,
+                         timeseries=timeseries, events=events)
+
 
     def __copy__(self):
         return Recording(name=self.name,
