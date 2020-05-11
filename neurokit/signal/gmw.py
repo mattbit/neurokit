@@ -39,7 +39,7 @@ class MorseWavelet:
         # As before, I use the log instead of doing a ω^β.
         with np.errstate(divide='ignore', invalid='ignore'):
             wav0 = scale * H * \
-                np.sqrt(2) * np.exp(logAk - aω**γ + self.β * np.log(aω))
+                np.sqrt(2) * np.exp(logAk - aω**self.γ + self.β * np.log(aω))
 
         # Remove the term which explosed. Not very elegant, but it works.
         if np.isscalar(wav0):
@@ -50,15 +50,28 @@ class MorseWavelet:
         # Finally, I add the generalized Laguerre polynomial term.
         return wav0 * eval_genlaguerre(k, r - 1, 2 * aω**self.γ)
 
+    def central_freq(self, scale=1):
+        return (self.β / self.γ)**(1 / self.γ) / scale * 0.5 / np.pi
+
     def psi_t(self, length, scale: float = 1, k: int = 0):
         """THIS IS EXPERIMENTAL!!!
 
         What should we do? Find a frequency such that the wavelet psi_f goes
         to zero, then do an ifft based on that.
         """
-        raise NotImplementedError()
+        if k != 0:
+            raise NotImplementedError('Currently only implemented for k = 0.')
 
-    def cwt(self, signal: np.ndarray, scales: np.ndarray, num_k=0, norm=1):
+        dt = 8 / length / self.central_freq()
+        fast_length = length  # fft.next_fast_len(length)
+        freqs = fft.fftfreq(fast_length, dt)
+        psi_t = fft.ifft(self.psi_f(freqs) / dt)
+        psi_t = np.roll(psi_t, psi_t.size // 2)
+
+        return psi_t
+
+    def cwt(self, signal: np.ndarray, scales: np.ndarray, num_k=1,
+            norm='energy', sf=1):
         """Continuous wavelet transform"""
         if norm not in ('energy', 'analytic', None):
             raise ValueError(f'Invalid norm `{norm}`.')
@@ -68,25 +81,27 @@ class MorseWavelet:
         fast_len = fft.next_fast_len(n)
 
         # Signal in frequency domain
-        fs = fft.fftfreq(fast_len)
-        f_sig = fft.fft(sig, n=fast_len)
+        fs = fft.fftfreq(fast_len, d=1 / sf)
+        f_sig = fft.fft(signal, n=fast_len)
 
         # Compute the wavelet transform
         W = np.zeros((scales.size, n), dtype=complex)
         for i, scale in enumerate(scales):
             # Select the correct normalization value.
             if norm == 'energy':
-                norm = np.sqrt(scale)
+                norm_val = np.sqrt(scale)
             elif norm == 'analytic':
-                norm = scale
+                norm_val = 2 * scale
             else:
-                norm = 1
+                norm_val = 1
 
             # Average over orthogonal wavelets, k = 0, …, num_k - 1
-            for k in range(num_k + 1):
-                # Do the convolution for each scale in the frequency domain, then
-                # invert the FFT to get the wavelet transform.
-                W[i] += fft.ifft(f_sig * self.psi_f(fs) / Δt, n=n)
-            W[i] /= (norm * num_k)
+            for k in range(num_k):
+                # Do the convolution for each scale in the frequency domain,
+                # then invert the FFT to get the wavelet transform.
+                W[i] += fft.ifft(f_sig * self.psi_f(fs, scale, k) * sf, n=n)
+            W[i] /= (norm_val * num_k)
 
-        return W
+        freqs = self.central_freq(scales)
+
+        return freqs, W
