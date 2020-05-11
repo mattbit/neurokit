@@ -26,12 +26,12 @@ class MorseWavelet:
         """
         r = (2 * self.β + 1) / self.γ
 
-        # I calculate the log to avoid explosing functions and improve the
+        # I calculate the log to avoid exploding functions and improve the
         # numerical precision, particularly for the Γ(k + 1)/Γ(k + r).
         logAk = 0.5 * (np.log(np.pi * self.γ) + r * np.log(2) +
                        loggamma(k + 1) - loggamma(k + r))
 
-        # The effective frequency in radians
+        # The frequency in radians
         aω = scale * 2 * np.pi * freqs
 
         H = np.heaviside(aω, 0.5)
@@ -87,10 +87,15 @@ class MorseWavelet:
         # Compute the wavelet transform
         W = np.zeros((scales.size, n), dtype=complex)
         for i, scale in enumerate(scales):
-            # Select the correct normalization value.
+            # Select the normalization value.
             if norm == 'energy':
+                # The classical normalization for CWT, 1 / sqrt(scale)
                 norm_val = np.sqrt(scale)
             elif norm == 'analytic':
+                # Using the norm `1 / (2 * scale)` means that the coefficients
+                # of the wavelet transform will correspond to the analytic
+                # signal (i.e. the Hilbert transform of the real signal) at
+                # the chosen wavelet scale.
                 norm_val = 2 * scale
             else:
                 norm_val = 1
