@@ -57,7 +57,7 @@ def test_detect_suppressions():
     detections = analyzer.detect_ies(min_duration=1.48, threshold=8.)
     assert len(detections) == 2
 
-    detections = analyzer.detect_ies(threshold=1.5, min_duration=1.)
+    detections = analyzer.detect_ies(threshold=1.01, min_duration=1.)
 
     assert len(detections) == 1
     assert 0 * sec <= detections.loc[0].start <= 1.01 * sec
