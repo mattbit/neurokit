@@ -134,7 +134,8 @@ def test_artifacts():
                                   frequency=100)
     rec = rec.filter(1)
 
-    rec.data.iloc[200:400] = 0
+    rec.data.iloc[200:400] /= rec.data.iloc[200:400].max() / 5
+
     analyzer = SuppressionAnalyzer(rec)
     detections = analyzer.detect_ies()
     assert len(detections) == 1
