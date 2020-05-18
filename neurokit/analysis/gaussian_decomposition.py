@@ -1,13 +1,18 @@
+import warnings
 import numpy as np
 from numba import jit
-from scipy.optimize import curve_fit
+from scipy.optimize import least_squares
 from scipy.ndimage import gaussian_filter1d
 
 
 @jit
-def _sum_of_gaussians(x, *params):
-    params = np.array(params)
+def _sum_of_gaussians(x, params):
     return (params[0::3] * np.exp(- 0.5 * (x.reshape(x.size, 1) - params[1::3])**2 / params[2::3]**2)).sum(axis=1)
+
+
+@jit
+def _ffit(params, x, y):
+    return (params[0::3] * np.exp(- 0.5 * (x.reshape(x.size, 1) - params[1::3])**2 / params[2::3]**2)).sum(axis=1) - y
 
 
 def sum_of_gaussians(x, components):
@@ -22,7 +27,7 @@ def sum_of_gaussians(x, components):
     Returns
     -------
     """
-    return _sum_of_gaussians(x, *np.array(components).ravel())
+    return _sum_of_gaussians(x, np.array(components).ravel())
 
 
 class DecompositionError(RuntimeError):
@@ -118,16 +123,16 @@ class GaussianDecomposition:
         bounds_l[:, 2] = self.min_sigma
         bounds = (bounds_l.ravel(), bounds_h.ravel())
 
-        try:
-            _fit_params, _ = curve_fit(_sum_of_gaussians, np.arange(y.size),
-                                       y, p0=params_guess.ravel(),
-                                       bounds=bounds,
-                                       max_nfev=self.max_ls_iter)
-        except RuntimeError:
-            raise DecompositionError("Least squares fit did not converge. "
-                                     + "Try increasing `max_ls_iter`.")
+        base_x = np.arange(y.size, dtype=np.float)
 
-        params = sorted(_fit_params.reshape(len(_fit_params) // 3, 3),
+        r = least_squares(_ffit, params_guess.ravel(), args=(
+            base_x, y), bounds=bounds, max_nfev=self.max_ls_iter)
+
+        if not r.success:
+            warnings.warn("Least squares fit did not converge. "
+                          + "Try increasing `max_ls_iter`.")
+
+        params = sorted(r.x.reshape(len(r.x) // 3, 3),
                         key=lambda x: x[0], reverse=True)
         params = np.array(params)
         if self.normalize:
