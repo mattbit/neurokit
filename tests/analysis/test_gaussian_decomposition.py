@@ -101,17 +101,17 @@ def test_fit_small_values():
     assert σ0 == approx(3., abs=0.5)
 
 
-def test_raises_exception_if_least_squares_does_not_converge():
-    xs = np.arange(100)
-    ys = sum_of_gaussians(xs, [(10, 30, 5), (20, 70, 3)])
-
-    dec = GaussianDecomposition(alpha=1, min_sigma=10, min_distance=5,
-                                max_ls_iter=10)
-
-    with pytest.raises(DecompositionError):
-        dec.fit(ys)
-
-
+# def test_raises_exception_if_least_squares_does_not_converge():
+#     xs = np.arange(100)
+#     ys = sum_of_gaussians(xs, [(10, 30, 5), (20, 70, 3)])
+#
+#     dec = GaussianDecomposition(alpha=1, min_sigma=10, min_distance=5,
+#                                 max_ls_iter=10)
+#
+#     with pytest.raises(DecompositionError):
+#         dec.fit(ys)
+# #
+#
 def test_raises_exception_if_cannot_guess_initial_params():
     xs = np.arange(100)
     ys = np.ones_like(xs)
