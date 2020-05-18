@@ -1,8 +1,17 @@
+import warnings
 import numpy as np
 import scipy.signal as ss
 from typing import Tuple, Sequence
 
 from ..core.series import TimeSeries
+
+
+def _warn_if_nan(values):
+    if np.isnan(values).any():
+        warnings.warn(('Timeseries contains `NaN` values, IIR filtering will '
+                       'make all values `NaN`! If you want to mask as `NaN` '
+                       'some segment in the timeseries you should do it after '
+                       'filtering.'), RuntimeWarning)
 
 
 def bandpass(timeseries: TimeSeries,
@@ -38,7 +47,7 @@ def bandpass(timeseries: TimeSeries,
     Wn = np.asarray(freqs) / (0.5 * timeseries.frequency)
     sos = ss.butter(order, Wn, btype='bandpass', output='sos')
     values = timeseries.loc[:, channels].values
-
+    _warn_if_nan(values)
     ts = timeseries.copy()
     ts.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
 
@@ -77,6 +86,7 @@ def lowpass(timeseries: TimeSeries,
     Wn = freq / (0.5 * ts.frequency)
     sos = ss.butter(order, Wn, btype='lowpass', output='sos')
     values = ts.loc[:, channels].values
+    _warn_if_nan(values)
     ts.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
     return ts
 
@@ -113,6 +123,7 @@ def highpass(timeseries: TimeSeries,
     Wn = freq / (0.5 * ts.frequency)
     sos = ss.butter(order, Wn, btype='highpass', output='sos')
     values = ts.loc[:, channels].values
+    _warn_if_nan(values)
     ts.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
     return ts
 
@@ -145,5 +156,6 @@ def notch(timeseries: TimeSeries,
     ts = timeseries.copy()
     b, a = ss.iirnotch(freq, qf, ts.frequency)
     values = ts.loc[:, channels].values
+    _warn_if_nan(values)
     ts.loc[:, channels] = ss.filtfilt(b, a, values, axis=0)
     return ts
