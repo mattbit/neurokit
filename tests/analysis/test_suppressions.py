@@ -38,7 +38,7 @@ def test_detect_suppressions():
     rec.data.iloc[500:800] /= rec.data.iloc[500:800].abs().max() / 5
 
     analyzer = SuppressionAnalyzer(rec)
-    detections = analyzer.detect_ies(threshold=8.)
+    detections = analyzer.detect_ies(threshold=5.)
 
     assert len(detections) == 2
 
@@ -49,17 +49,11 @@ def test_detect_suppressions():
     assert 2.48 * sec <= detections.loc[0].end <= 3.5 * sec
     assert 3.6 * sec <= detections.loc[1].start <= 5.01 * sec
 
-    detections = analyzer.detect_ies(min_duration=0.5)
-
+    detections = analyzer.detect_ies(threshold=8., min_duration=0.5)
     assert len(detections) == 3
     assert 2 * sec <= detections.loc[1].start <= 3.01 * sec
     assert 3.58 * sec <= detections.loc[1].end <= 4.6 * sec
 
-    # import matplotlib.pyplot as plt
-    # plt.plot(ts, rec.data.EEG_1)
-    # plt.hlines([-1.5, 1.5], 0, 10, lw=1)
-    # plt.vlines([1, 2.50, 3, 3.6, 5, 8], -50, 50, color='r')
-    # plt.ylim(-5, 5)
     detections = analyzer.detect_ies(min_duration=1.48, threshold=8.)
     assert len(detections) == 2
 
@@ -108,6 +102,7 @@ def test_detect_alpha_suppressions():
     assert len(iso_elec_suppressions) == 0
 
     detections = analyzer.detect_alpha_suppressions(frequency_band=(7.5, 12.5))
+
     assert len(detections) == 2
 
     sec = pd.Timedelta('1s')
