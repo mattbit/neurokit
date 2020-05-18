@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import warnings
 import numpy as np
 import pandas as pd
 from copy import deepcopy
 from typing import Sequence, Union
-
 from .common import NamedItemsBag
 from .series import EventSeries, TimeSeries
 
@@ -201,6 +201,11 @@ class Recording:
 
         return write_nkr(self, filename, **kwargs)
 
+    def to_msgpack(self, filename, **kwargs):
+        from ..io.msgpack import write_msgpack
+
+        return write_msgpack(self, filename, **kwargs)
+
     def slice(self, start, end=None):
         if start is not None and not isinstance(start, pd.Timedelta):
             start = pd.to_timedelta(start, unit='s')
@@ -212,7 +217,6 @@ class Recording:
 
         return Recording(name=self.name, meta=self.meta, patient=self.patient,
                          timeseries=timeseries, events=events)
-
 
     def __copy__(self):
         return Recording(name=self.name,

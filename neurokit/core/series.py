@@ -78,7 +78,7 @@ class EventSeries:
         return self.data.itertuples()
 
     def __repr__(self):
-        return f"<Events '{self.name}' ({len(self.data)} events)>"
+        return f"<EventSeries '{self.name}' ({len(self.data)} events)>"
 
     def __len__(self):
         return len(self.data)
