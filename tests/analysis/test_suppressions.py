@@ -59,7 +59,7 @@ def test_detect_suppressions():
 
     detections = analyzer.detect_ies(threshold=1.5, min_duration=1.)
 
-    assert 1 <= len(detections) <= 2
+    assert len(detections) == 1
     assert 0 * sec <= detections.loc[0].start <= 1.01 * sec
     assert 2.48 * sec <= detections.loc[0].end <= 3.5 * sec
 
@@ -125,6 +125,7 @@ def test_no_ies_as_alpha():
     # should contain 1 ies suppression
     assert len(ies_detections) == 1
     alpha_detections = analyzer.detect_alpha_suppressions()
+
     # should contain no alpha suppressions
     assert len(alpha_detections) == 0
 
@@ -134,10 +135,11 @@ def test_artifacts():
                                   frequency=100)
     rec = rec.filter(1)
 
+    # Add suppression
     rec.data.iloc[200:400] /= rec.data.iloc[200:400].max() / 5
 
     analyzer = SuppressionAnalyzer(rec)
-    detections = analyzer.detect_ies()
+    detections = analyzer.detect_ies(threshold=5.5)
     assert len(detections) == 1
 
     # Add artifact
@@ -146,5 +148,5 @@ def test_artifacts():
     rec.es.add(artifacts)
 
     analyzer = SuppressionAnalyzer(rec)
-    detections = analyzer.detect_ies()
+    detections = analyzer.detect_ies(threshold=5.5)
     assert len(detections) == 0
