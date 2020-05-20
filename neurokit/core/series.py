@@ -98,7 +98,12 @@ class EventSeries:
         return self.data.loc[key]
 
 
-class TimeSeries(pd.DataFrame):
+class BaseTimeSeries(pd.DataFrame):
+    """Base TimeSeries class"""
+    _metadata = ['name', 'filters']
+
+
+class TimeSeries(BaseTimeSeries):
     """"""
     _metadata = ['name', 'filters']
 
@@ -186,3 +191,60 @@ class TimeSeries(pd.DataFrame):
             frequency=data.get('frequency'),
             offset=offset
         )
+
+
+class UnevenTimeSeries(BaseTimeSeries):
+    """Unevenly spaced time series."""
+
+    def __init__(self, *args, **kwargs):
+        self.name = kwargs.pop('name', None)
+        self.filters = kwargs.pop('filters', {})
+        super().__init__(*args, **kwargs)
+
+        if not isinstance(self.index, pd.TimedeltaIndex):
+            raise ValueError('A TimedeltaIndex must be defined.')
+        elif not isinstance(self.index, FixedTimedeltaIndex):
+            self.index = FixedTimedeltaIndex(self.index)
+
+    @property
+    def _constructor(self):
+        return UnevenTimeSeries
+
+    @property
+    def _constructor_expanddim(self):
+        return NotImplementedError("Not supported for TimeSeries!")
+
+    @property
+    def channels(self):
+        return self.columns
+
+    @property
+    def duration(self):
+        return self.index[-1] - self.index[0]
+
+    def to_dict(self, **kwargs):  # skipcq: PYL-W0221
+        return {
+            'name': self.name,
+            'index': self.index.total_seconds().values,
+            'channels': [{'name': ch, 'data': self[ch].values}
+                         for ch in self.channels],
+        }
+
+    @classmethod
+    def from_dict(cls, data, **kwargs):  # skipcq: PYL-W0221
+        chs = data.get('channels', [])
+        ch_names = [ch.get('name') for ch in chs]
+        ch_data = np.array([ch.get('data') for ch in chs], dtype=np.float).T
+
+        return cls(
+            ch_data,
+            columns=ch_names,
+            index=pd.to_timedelta(data.get('index'), unit='s'),
+            name=data.get('name'),
+        )
+
+
+def timeseries_from_dict(ts_data):
+    cls = TimeSeries if 'frequency' in ts_data else UnevenTimeSeries
+
+    return cls.from_dict(ts_data)
