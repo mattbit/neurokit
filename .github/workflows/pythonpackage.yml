@@ -8,32 +8,29 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.7, 3.8]
-
+    env:
+      WORKON_HOME: $HOME/.cache/venvs
+      PIPENV_CACHE_DIR: $HOME/.cache/pipenv_cache
+      PIP_CACHE_DIR: $HOME/.cache/pipenv_cache
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Get pip cache dir
-      id: pip-cache
-      run: |
-        echo "::set-output name=dir::$(pip cache dir)"
-    - name: pip cache
+    - name: cache
       uses: actions/cache@v1
       id: cache
       with:
-        path: ${{ steps.pip-cache.outputs.dir }}
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/Pipfile') }}
+        path: $HOME/.cache
+        key: ${{ runner.os }}-${{ matrix.python-version }}-cache-${{ hashFiles('**/Pipfile.lock') }}
         restore-keys: |
           ${{ runner.os }}-pip-
     - name: Install dependencies
-      if: steps.cache.outputs.cache-hit != 'true'
       run: |
         python -m pip install --upgrade pip
         python -m pip install pipenv
