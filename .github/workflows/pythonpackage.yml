@@ -39,4 +39,4 @@ jobs:
         pipenv install --system --dev
     - name: Test
       run: |
-        python -m pytest
+        python -m pytest -x
