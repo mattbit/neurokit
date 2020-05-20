@@ -45,6 +45,8 @@ def _msgpack_encoder(obj):
         return int(pd.to_timedelta(obj).asm8.astype(int))
     if isinstance(obj, np.ndarray):
         return obj.tolist()
+    if isinstance(obj, np.generic):
+        return obj.item()
 
     return obj
 
