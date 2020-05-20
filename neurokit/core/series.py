@@ -102,6 +102,14 @@ class BaseTimeSeries(pd.DataFrame):
     """Base TimeSeries class"""
     _metadata = ['name', 'filters']
 
+    @property
+    def _constructor(self):
+        return BaseTimeSeries
+
+    @property
+    def _constructor_expanddim(self):
+        return NotImplementedError("Not supported for TimeSeries!")
+
 
 class TimeSeries(BaseTimeSeries):
     """"""
@@ -203,7 +211,8 @@ class UnevenTimeSeries(BaseTimeSeries):
 
         if not isinstance(self.index, pd.TimedeltaIndex):
             raise ValueError('A TimedeltaIndex must be defined.')
-        elif not isinstance(self.index, FixedTimedeltaIndex):
+
+        if not isinstance(self.index, FixedTimedeltaIndex):
             self.index = FixedTimedeltaIndex(self.index)
 
     @property
@@ -245,6 +254,10 @@ class UnevenTimeSeries(BaseTimeSeries):
 
 
 def timeseries_from_dict(ts_data):
+    """Create a timeseries from a dict structure.
+
+    The correct type (evenly or unevenly spaced) is inferred from the data.
+    """
     cls = TimeSeries if 'frequency' in ts_data else UnevenTimeSeries
 
     return cls.from_dict(ts_data)
