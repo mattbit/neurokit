@@ -1,4 +1,4 @@
-from .core import TimeSeries, EventSeries, Recording, Patient
+from .core import TimeSeries, UnevenTimeSeries, EventSeries, Recording, Patient
 from . import io
 from . import preprocessing
 from . import utils

@@ -5,7 +5,8 @@ import pandas as pd
 from copy import deepcopy
 from typing import Sequence, Union
 from .common import NamedItemsBag
-from .series import EventSeries, TimeSeries
+from .series import (EventSeries, BaseTimeSeries,
+                     TimeSeries, timeseries_from_dict)
 
 
 class Patient:
@@ -90,7 +91,7 @@ class Recording:
         if not timeseries:
             raise ValueError('At least a timeseries is required.')
 
-        self.ts = NamedItemsBag(timeseries, dtype=TimeSeries)
+        self.ts = NamedItemsBag(timeseries, dtype=BaseTimeSeries)
         self._main_ts = timeseries[0].name
 
         self.es = NamedItemsBag(events, dtype=EventSeries)
@@ -177,7 +178,7 @@ class Recording:
         name = data.get('name')
         meta = data.get('meta', {})
         patient = Patient.from_dict(data.get('patient', {}))
-        ts = [TimeSeries.from_dict(ts_data)
+        ts = [timeseries_from_dict(ts_data)
               for ts_data in data.get('timeseries', [])]
         es = [EventSeries.from_dict(es_data)
               for es_data in data.get('events', [])]
