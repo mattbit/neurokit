@@ -6,6 +6,12 @@ env:
   global:
     - DEEPSOURCE_DSN=https://e694b68084af4dee96871149d8024d79@deepsource.io
     - DISCORD_WEBHOOK=https://discordapp.com/api/webhooks/692322350452178965/dXLSKaq_8XP1vEt8bvhEQRUlFB1hyuOWtWXh4xF4VkNjn0M_e161P6QDbsYsm8Wu5RAK
+    - WORKON_HOME=$HOME/.pipenv/venvs
+    - PIPENV_CACHE_DIR=$HOME/.pipenv/pipcache
+cache:
+  pip: true
+  directories:
+    - $HOME/.pipenv
 install:
   - pip install pipenv
   - pipenv install --dev
