@@ -10,9 +10,8 @@ from typing import Sequence, Tuple
 from scipy.ndimage.morphology import binary_dilation, binary_erosion
 from scipy.signal import savgol_filter
 
-from ..io import Recording
+from ..core import Recording
 from ..utils import mask_to_intervals
-from ..preprocessing.filters import bandpass
 
 
 def _detect_suppressions(recording: Recording,
@@ -49,7 +48,7 @@ def _detect_suppressions(recording: Recording,
        2.1 (2019).
     """
     if not channels:
-        channels = recording.channels
+        channels = recording.data.channels
 
     if min_duration < 0:
         raise ValueError('min_duration should be >= 0')
@@ -57,7 +56,11 @@ def _detect_suppressions(recording: Recording,
     if min_gap < 0:
         raise ValueError('min_gap should be >= 0')
 
-    rec = recording.artifacts_to_nan()
+    if recording.es.has('artifacts'):
+        rec = recording.artifacts_to_nan()
+    else:
+        rec = recording.copy()
+
     if threshold is None:
         threshold = _find_threshold(rec.data.loc[:, channels])
     envelope = rec.data.loc[:, channels].abs().values.max(axis=1)
@@ -65,7 +68,7 @@ def _detect_suppressions(recording: Recording,
     with np.errstate(invalid='ignore'):
         ies_mask = envelope < threshold
     min_length = math.floor(min_duration * rec.frequency)
-    dilate_len = math.floor((min_duration+min_gap)*rec.frequency)
+    dilate_len = math.floor((min_duration + min_gap) * rec.frequency)
     gap_len = math.floor(min_gap * rec.frequency)
 
     if min_length > 0:
@@ -97,7 +100,8 @@ def _find_threshold(data: pd.DataFrame, threshold: float = 8.):
     """
     mean_amplitude = data.abs().mean().mean()
     if mean_amplitude < 30:
-        threshold = threshold / 1.25
+        rms_value = np.sqrt(np.nanmean(data.values ** 2))
+        threshold = rms_value * 1.25
     return threshold
 
 
@@ -124,10 +128,10 @@ def _detect_alpha_suppressions(
         The boolean mask with the detected α-suppressions.
     """
     if not channels:
-        channels = recording.channels
+        channels = recording.data.channels
     rec = recording.copy()
     rec.data = recording.data.loc[:, channels]
-    filtered = bandpass(rec, frequency_band)
+    filtered = rec.filter(*frequency_band)
     rms_before = np.sqrt(np.mean(rec.data.values**2))
     rms_after = np.sqrt(np.mean(filtered.data.values**2))
     threshold = 8 * rms_after / rms_before
@@ -146,7 +150,8 @@ class SuppressionAnalyzer:
 
     def detect_ies(self, **kwargs):
         self._ies_mask = _detect_suppressions(self.recording, **kwargs)
-        intervals = mask_to_intervals(self._ies_mask, self.recording.data.index)
+        intervals = mask_to_intervals(
+            self._ies_mask, self.recording.data.index)
         detections = [{'start': start,
                        'end': end,
                        'channel': None,

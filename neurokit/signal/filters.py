@@ -1,21 +1,30 @@
+import warnings
 import numpy as np
 import scipy.signal as ss
 from typing import Tuple, Sequence
 
-from ..io import Recording
+from ..core.series import TimeSeries
 
 
-def bandpass(recording: Recording,
+def _warn_if_nan(values):
+    if np.isnan(values).any():
+        warnings.warn(('Timeseries contains `NaN` values, IIR filtering will '
+                       'make all values `NaN`! If you want to mask as `NaN` '
+                       'some segment in the timeseries you should do it after '
+                       'filtering.'), RuntimeWarning)
+
+
+def bandpass(timeseries: TimeSeries,
              freqs: Tuple[float, float],
              channels: Sequence[str] = None,
-             order: int = 1) -> Recording:
+             order: int = 1) -> TimeSeries:
     """Bandpass filter.
 
 
     Parameters
     ----------
-    recording : Recording
-        The recording to filter.
+    timeseries : TimeSeries
+        The timeseries to filter.
     freqs : tuple
         The (low, high) frequency for the filter, in Hz.
     channels : Sequence[str], optional
@@ -29,29 +38,32 @@ def bandpass(recording: Recording,
 
     Returns
     -------
-    recording : Recording
-        The recording with bandpass-filtered signals.
+    timeseries : TimeSeries
+        The timeseries with bandpass-filtered signals.
     """
     if channels is None:
-        channels = recording.channels
-    rec = recording.copy()
-    Wn = np.asarray(freqs) / (0.5 * rec.frequency)
+        channels = timeseries.channels
+
+    Wn = np.asarray(freqs) / (0.5 * timeseries.frequency)
     sos = ss.butter(order, Wn, btype='bandpass', output='sos')
-    values = rec.data.loc[:, channels].values
-    rec.data.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
-    return rec
+    values = timeseries.loc[:, channels].values
+    _warn_if_nan(values)
+    ts = timeseries.copy()
+    ts.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
+
+    return ts
 
 
-def lowpass(recording: Recording,
+def lowpass(timeseries: TimeSeries,
             freq: float,
             channels: Sequence[str] = None,
-            order: int = 2) -> Recording:
+            order: int = 2) -> TimeSeries:
     """Lowpass filter.
 
     Parameters
     ----------
-    recording : Recording
-        The recording to filter.
+    timeseries : TimeSeries
+        The timeseries to filter.
     freq : float
         The critical frequency of the filter in Hz.
     channels : Sequence[str], optional
@@ -65,29 +77,30 @@ def lowpass(recording: Recording,
 
     Returns
     -------
-    recording : Recording
-        The recording with lowpass-filtered signals.
+    timeseries : TimeSeries
+        The timeseries with lowpass-filtered signals.
     """
     if channels is None:
-        channels = recording.channels
-    rec = recording.copy()
-    Wn = freq / (0.5 * rec.frequency)
+        channels = timeseries.channels
+    ts = timeseries.copy()
+    Wn = freq / (0.5 * ts.frequency)
     sos = ss.butter(order, Wn, btype='lowpass', output='sos')
-    values = rec.data.loc[:, channels].values
-    rec.data.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
-    return rec
+    values = ts.loc[:, channels].values
+    _warn_if_nan(values)
+    ts.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
+    return ts
 
 
-def highpass(recording: Recording,
+def highpass(timeseries: TimeSeries,
              freq: float,
              channels: Sequence[str] = None,
-             order: int = 2) -> Recording:
+             order: int = 2) -> TimeSeries:
     """Highpass filter.
 
     Parameters
     ----------
-    recording : Recording
-        The recording to filter.
+    timeseries : TimeSeries
+        The timeseries to filter.
     freq : float
         The critical frequency of the filter in Hz.
     channels : Sequence[str], optional
@@ -101,29 +114,30 @@ def highpass(recording: Recording,
 
     Returns
     -------
-    recording : Recording
-        The recording with highpass-filtered signals.
+    timeseries : TimeSeries
+        The timeseries with highpass-filtered signals.
     """
     if channels is None:
-        channels = recording.channels
-    rec = recording.copy()
-    Wn = freq / (0.5 * rec.frequency)
+        channels = timeseries.channels
+    ts = timeseries.copy()
+    Wn = freq / (0.5 * ts.frequency)
     sos = ss.butter(order, Wn, btype='highpass', output='sos')
-    values = rec.data.loc[:, channels].values
-    rec.data.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
-    return rec
+    values = ts.loc[:, channels].values
+    _warn_if_nan(values)
+    ts.loc[:, channels] = ss.sosfiltfilt(sos, values, axis=0)
+    return ts
 
 
-def notch(recording: Recording,
+def notch(timeseries: TimeSeries,
           freq: float,
           channels: Sequence[str] = None,
-          qf: float = 30) -> Recording:
+          qf: float = 30) -> TimeSeries:
     """Notch filter.
 
     Parameters
     ----------
-    recording : Recording
-        The recording to filter.
+    timeseries : TimeSeries
+        The timeseries to filter.
     freq : float
         The critical frequency of the filter in Hz.
     channels : Sequence[str], optional
@@ -134,13 +148,14 @@ def notch(recording: Recording,
 
     Returns
     -------
-    recording : Recording
-        The recording with highpass-filtered signals.
+    timeseries : TimeSeries
+        The timeseries with highpass-filtered signals.
     """
     if channels is None:
-        channels = recording.channels
-    rec = recording.copy()
-    b, a = ss.iirnotch(freq, qf, rec.frequency)
-    values = rec.data.loc[:, channels].values
-    rec.data.loc[:, channels] = ss.filtfilt(b, a, values, axis=0)
-    return rec
+        channels = timeseries.channels
+    ts = timeseries.copy()
+    b, a = ss.iirnotch(freq, qf, ts.frequency)
+    values = ts.loc[:, channels].values
+    _warn_if_nan(values)
+    ts.loc[:, channels] = ss.filtfilt(b, a, values, axis=0)
+    return ts
