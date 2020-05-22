@@ -9,7 +9,7 @@ from ..utils import mask_to_intervals
 
 def detect_artifacts(recording, **kwargs):
     artifacts = []
-    for ch in recording.channels:
+    for ch in recording.data.channels:
         mask = detect_signal_artifacts(recording.data[ch], **kwargs)
 
         for start, end in mask_to_intervals(mask, recording.data.index):
