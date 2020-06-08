@@ -21,7 +21,7 @@ def read_edf(path):
 
 
 def write_edf(recording, path, artifacts=False):
-    writer = EdfWriter(str(path), len(recording.channels))
+    writer = EdfWriter(str(path), len(recording.data.channels))
     try:
         duration, samples_per_record = _calc_datarecord_params(
             recording.frequency)
@@ -39,7 +39,7 @@ def write_edf(recording, path, artifacts=False):
         phys_max = np.nanmax(recording.data.values)
         phys_min = np.nanmin(recording.data.values)
 
-        for n, channel in enumerate(recording.channels):
+        for n, channel in enumerate(recording.data.channels):
             writer.setLabel(n, channel)
             writer.setPhysicalDimension(n, 'uV')
             writer.setSamplefrequency(n, samples_per_record)
@@ -59,7 +59,7 @@ def write_edf(recording, path, artifacts=False):
             data = np.pad(data, ((0, pad), (0, 0)))
 
         num_records = data.shape[0] // samples_per_record
-        num_channels = len(recording.channels)
+        num_channels = len(recording.data.channels)
         raw = data.reshape((num_records, samples_per_record, num_channels))
         for block in raw:
             writer.blockWritePhysicalSamples(block.ravel('F'))
