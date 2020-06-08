@@ -3,6 +3,7 @@ import mne
 import shutil
 import chardet
 import logging
+import datetime
 import unidecode
 import dateparser
 import numpy as np
@@ -25,8 +26,8 @@ def write_edf(recording, path, artifacts=False):
     try:
         duration, samples_per_record = _calc_datarecord_params(
             recording.frequency)
-        if recording.id is not None:
-            id_string = str(recording.id)
+        if recording.name is not None:
+            id_string = str(recording.name)
             writer.setAdmincode(id_string)
             writer.setPatientCode(id_string)
 
@@ -34,7 +35,11 @@ def write_edf(recording, path, artifacts=False):
         #     f'{key}={value}' for key, value in recording.patient.items())
         # writer.setPatientAdditional(patient_info)
 
-        writer.setStartdatetime(recording.start_date)
+        if 'date' in recording.meta:
+            start_date = recording.meta['date']
+        else:
+            start_date = datetime.datetime.fromtimestamp(0)
+        writer.setStartdatetime(start_date)
 
         phys_max = np.nanmax(recording.data.values)
         phys_min = np.nanmin(recording.data.values)
@@ -65,18 +70,11 @@ def write_edf(recording, path, artifacts=False):
             writer.blockWritePhysicalSamples(block.ravel('F'))
 
         # Write annotations
-        for item in recording.annotations.itertuples():
-            onset = (item.start - recording.start_date).total_seconds()
-            duration = (item.end - item.start).total_seconds()
-            writer.writeAnnotation(onset, duration, item.description)
-
-        # Write artifacts as annotations
-        if artifacts:
-            for item in recording.artifacts.itertuples():
-                onset = (item.start - recording.start_date).total_seconds()
+        if recording.es.has('annotations'):
+            for item in recording.es['annotations']:
+                onset = (item.start - start_date).total_seconds()
                 duration = (item.end - item.start).total_seconds()
-                description = f'ARTIFACT | {item.channel} | {item.description}'
-                writer.writeAnnotation(onset, duration, description)
+                writer.writeAnnotation(onset, duration, item.description)
 
     finally:
         writer.close()
