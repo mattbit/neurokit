@@ -191,6 +191,24 @@ class Recording:
             meta=meta,
         )
 
+    @classmethod
+    def from_mne_raw(cls, raw):
+        """Create a Recording from an `mne.io.Raw` object.
+
+        Parameters
+        ----------
+        raw : mne.io.Raw
+            The Raw object.
+
+        Returns
+        -------
+        recording : neurokit.Recording
+            The neurokit recording object.
+        """
+        from ..io._mne import _recording_from_mne_raw
+
+        return _recording_from_mne_raw(raw)
+
     def to_edf(self, filename, **kwargs):
         from ..io.edf import write_edf
 
