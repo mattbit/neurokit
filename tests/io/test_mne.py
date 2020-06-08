@@ -2,7 +2,7 @@ import mne
 from neurokit import Recording
 
 
-def test_read_edf():
+def test_recording_from_raw():
     raw = mne.io.read_raw_edf('tests/data/test.edf', verbose=False)
 
     rec = Recording.from_mne_raw(raw)
