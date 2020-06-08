@@ -23,4 +23,3 @@ def test_write_edf():
     assert rec.data.frequency == new_rec.data.frequency
     assert len(rec.data.channels) == len(new_rec.data.channels)
     assert rec.data.channels[0] == new_rec.data.channels[0]
-    
