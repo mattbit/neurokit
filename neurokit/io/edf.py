@@ -3,6 +3,7 @@ import mne
 import shutil
 import chardet
 import logging
+import datetime
 import unidecode
 import dateparser
 import numpy as np
@@ -21,12 +22,12 @@ def read_edf(path):
 
 
 def write_edf(recording, path, artifacts=False):
-    writer = EdfWriter(str(path), len(recording.channels))
+    writer = EdfWriter(str(path), len(recording.data.channels))
     try:
         duration, samples_per_record = _calc_datarecord_params(
             recording.frequency)
-        if recording.id is not None:
-            id_string = str(recording.id)
+        if recording.name is not None:
+            id_string = str(recording.name)
             writer.setAdmincode(id_string)
             writer.setPatientCode(id_string)
 
@@ -34,12 +35,16 @@ def write_edf(recording, path, artifacts=False):
         #     f'{key}={value}' for key, value in recording.patient.items())
         # writer.setPatientAdditional(patient_info)
 
-        writer.setStartdatetime(recording.start_date)
+        if 'date' in recording.meta:
+            start_date = recording.meta['date']
+        else:
+            start_date = datetime.datetime.fromtimestamp(0)
+        writer.setStartdatetime(start_date)
 
         phys_max = np.nanmax(recording.data.values)
         phys_min = np.nanmin(recording.data.values)
 
-        for n, channel in enumerate(recording.channels):
+        for n, channel in enumerate(recording.data.channels):
             writer.setLabel(n, channel)
             writer.setPhysicalDimension(n, 'uV')
             writer.setSamplefrequency(n, samples_per_record)
@@ -59,24 +64,17 @@ def write_edf(recording, path, artifacts=False):
             data = np.pad(data, ((0, pad), (0, 0)))
 
         num_records = data.shape[0] // samples_per_record
-        num_channels = len(recording.channels)
+        num_channels = len(recording.data.channels)
         raw = data.reshape((num_records, samples_per_record, num_channels))
         for block in raw:
             writer.blockWritePhysicalSamples(block.ravel('F'))
 
         # Write annotations
-        for item in recording.annotations.itertuples():
-            onset = (item.start - recording.start_date).total_seconds()
-            duration = (item.end - item.start).total_seconds()
-            writer.writeAnnotation(onset, duration, item.description)
-
-        # Write artifacts as annotations
-        if artifacts:
-            for item in recording.artifacts.itertuples():
-                onset = (item.start - recording.start_date).total_seconds()
+        if recording.es.has('annotations'):
+            for item in recording.es['annotations']:
+                onset = (item.start - start_date).total_seconds()
                 duration = (item.end - item.start).total_seconds()
-                description = f'ARTIFACT | {item.channel} | {item.description}'
-                writer.writeAnnotation(onset, duration, description)
+                writer.writeAnnotation(onset, duration, item.description)
 
     finally:
         writer.close()
