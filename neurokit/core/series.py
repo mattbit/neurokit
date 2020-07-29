@@ -8,6 +8,15 @@ from pandas.api.types import is_timedelta64_dtype
 from .indexing import FixedTimedeltaIndex, timedelta_range
 
 
+def _maybe_cast_timedelta(obj, unit='s'):
+    if isinstance(obj, pd.Timedelta):
+        return obj
+    if isinstance(obj, str):
+        return pd.to_timedelta(obj)
+
+    return pd.to_timedelta(obj, unit=unit)
+
+
 class EventSeries:
     """A frame of events."""
     __cols = ['start', 'end', 'channel', 'code', 'description']
@@ -27,10 +36,8 @@ class EventSeries:
             EventSeries.__index, drop=False).sort_index()
 
     def add(self, start, end=None, channel=None, code=None, description=None):
-        if not isinstance(start, pd.Timedelta):
-            start = pd.to_timedelta(start, unit='s')
-        if not isinstance(end, pd.Timedelta):
-            end = pd.to_timedelta(end, unit='s')
+        start = _maybe_cast_timedelta(start)
+        end = _maybe_cast_timedelta(end)
 
         event = pd.Series(data=[start, end, channel, code, description],
                           index=EventSeries.__cols,
@@ -85,11 +92,8 @@ class EventSeries:
 
     def __getitem__(self, key):
         if isinstance(key, slice):
-            start, stop = key.start, key.stop
-            if not isinstance(start, pd.Timedelta):
-                start = pd.to_timedelta(start, unit='s')
-            if not isinstance(stop, pd.Timedelta):
-                stop = pd.to_timedelta(stop, unit='s')
+            start = _maybe_cast_timedelta(key.start)
+            stop = _maybe_cast_timedelta(key.stop)
 
             data = self.data.loc[(None, start):(stop, None):key.step]
 

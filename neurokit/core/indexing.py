@@ -1,28 +1,21 @@
 import pandas as pd
-from pandas.core.dtypes.common import (_TD_DTYPE)
 
 
 class FixedTimedeltaIndex(pd.TimedeltaIndex):
     _supports_partial_string_indexing = False
     _typ = "fixedtimedeltaindex"
 
-    def __new__(
-            cls,
-            data=None,
-            unit=None,
-            freq=None,
-            closed=None,
-            dtype=_TD_DTYPE,
-            copy=False,
-            name=None,
-    ):
+    def __new__(cls, *args, **kwargs):
+        data = args[0] if len(args) > 0 else kwargs.get('data')
+        freq = args[2] if len(args) > 2 else kwargs.get('freq')
+        name = args[6] if len(args) > 6 else kwargs.get('name')
+
         if (isinstance(data, pd.TimedeltaIndex)
                 and freq is None
                 and name is None):
             return cls._simple_new(data._data)
 
-        return super().__new__(cls, data, unit, freq,
-                               closed, dtype, copy, name)
+        return super().__new__(cls, *args, **kwargs)
 
     def _maybe_cast_slice_bound(self, label, side, kind):
         """
