@@ -15,7 +15,7 @@ setuptools.setup(
     python_requires='>=3.6',
     install_requires=[
         'numpy',
-        'pandas',
+        'pandas>=1.1.0,<1.2',
         'scipy',
         'fastparquet',
         'plotly',
