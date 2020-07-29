@@ -33,9 +33,9 @@ def test_detect_suppressions():
     assert len(detections) == 0
 
     # Add suppressions
-    rec.data.iloc[100:250] /= rec.data.iloc[100:250].abs().max()
-    rec.data.iloc[300:360] /= rec.data.iloc[300:360].abs().max() / 5
-    rec.data.iloc[500:800] /= rec.data.iloc[500:800].abs().max() / 5
+    rec.data.iloc[100:250] /= rec.data.iloc[100:250].abs().values.max()
+    rec.data.iloc[300:360] /= rec.data.iloc[300:360].abs().values.max() / 5
+    rec.data.iloc[500:800] /= rec.data.iloc[500:800].abs().values.max() / 5
 
     analyzer = SuppressionAnalyzer(rec)
     detections = analyzer.detect_ies(threshold=5.)
@@ -136,7 +136,7 @@ def test_artifacts():
     rec = rec.filter(1)
 
     # Add suppression
-    rec.data.iloc[200:400] /= rec.data.iloc[200:400].max() / 5
+    rec.data.iloc[200:400] /= rec.data.iloc[200:400].values.max() / 5
 
     analyzer = SuppressionAnalyzer(rec)
     detections = analyzer.detect_ies(threshold=5.5)
