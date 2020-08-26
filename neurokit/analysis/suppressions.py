@@ -108,7 +108,8 @@ def _find_threshold(data: pd.DataFrame, threshold: float = 8.):
 def _detect_alpha_suppressions(
     recording: Recording,
     channels: Sequence = None,
-    frequency_band: Tuple[float, float] = (8., 16.)
+    frequency_band: Tuple[float, float] = (8., 16.),
+    threshold: float = 0.25
 ):
     """Extract Alpha Suppression from recording.
 
@@ -131,11 +132,10 @@ def _detect_alpha_suppressions(
         channels = recording.data.channels
     rec = recording.copy()
     rec.data = recording.data.loc[:, channels]
+    channel_rms = np.sqrt(np.mean(rec.data.values**2, axis=0))
+    normalized_channels = rec.data.dot(np.diag(1/channel_rms))
+    rec.data.loc[:, :] = normalized_channels.values
     filtered = rec.filter(*frequency_band)
-    rms_before = np.sqrt(np.mean(rec.data.values**2))
-    rms_after = np.sqrt(np.mean(filtered.data.values**2))
-    threshold = 8 * rms_after / rms_before
-
     return _detect_suppressions(filtered, threshold=threshold)
 
 
@@ -163,7 +163,8 @@ class SuppressionAnalyzer:
     def detect_alpha_suppressions(
             self,
             channels: Sequence = None,
-            frequency_band: Tuple[float, float] = (8., 16.)
+            frequency_band: Tuple[float, float] = (8., 16.),
+            threshold: float = 0.25
     ):
         """Extract Alpha Suppression from Recording.
 
@@ -174,7 +175,8 @@ class SuppressionAnalyzer:
         frequency_band: tuple[float, float]
             The frequency band used for the detection, in the form
             `(min_freq, max_freq)`. Default is `(8, 16)`.
-
+        threshold: float
+            The normalized threshold for evaluating suppression. Default is `0.25`
         Returns
         -------
         detections : pandas.DataFrame
@@ -186,7 +188,7 @@ class SuppressionAnalyzer:
 
         rec = self.recording.copy()
         alpha_mask = _detect_alpha_suppressions(
-            rec, channels, frequency_band)
+            rec, channels, frequency_band, threshold)
 
         alpha_mask[self._ies_mask] = False
         intervals = mask_to_intervals(alpha_mask, self.recording.data.index)
