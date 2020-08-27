@@ -27,5 +27,6 @@ setuptools.setup(
         'chardet',
         'unidecode',
         'mne>=0.20.0,<0.21',
+        'msgpack',
     ]
 )
