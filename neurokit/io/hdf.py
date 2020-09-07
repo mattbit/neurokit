@@ -78,7 +78,7 @@ def write_hdf(recording: Recording, filename):
             g['data'] = ts.values
             g['time'] = ts.index.total_seconds()
             g['time'].make_scale('time')
-            g['channel'] = np.array([ch for ch in ts.channels], dtype=_hdf_string)
+            g['channel'] = np.array(list(ts.channels), dtype=_hdf_string)
             g['channel'].make_scale('channel')
             g['data'].dims[0].attach_scale(g['time'])
             g['data'].dims[1].attach_scale(g['channel'])
