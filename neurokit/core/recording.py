@@ -209,6 +209,11 @@ class Recording:
 
         return _recording_from_mne_raw(raw)
 
+    def to_hdf(self, filename, **kwargs):
+        from ..io.hdf import write_hdf
+
+        return write_hdf(self, filename, **kwargs)
+
     def to_edf(self, filename, **kwargs):
         from ..io.edf import write_edf
 
