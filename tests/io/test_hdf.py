@@ -20,7 +20,7 @@ def test_read_hdf():
     assert rec.ts['test_data'].index[2].total_seconds() == 3
 
     assert len(rec.es['test_events']) == 2
-    events = [e for e in rec.es['test_events']]
+    events = list(rec.es['test_events'])
     assert events[0].start.total_seconds() == 0
     assert events[0].end.total_seconds() == 1
     assert events[0].channel == 'CH1'
