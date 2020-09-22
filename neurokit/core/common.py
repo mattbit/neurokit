@@ -55,7 +55,7 @@ class NamedItemsBag:
         return self.__deepcopy__()
 
     def add(self, item):
-        if item.name is None:
+        if not hasattr(item, 'name') or item.name is None:
             raise ValueError('Cannot add an item with no name.')
         if item.name in self._items:
             raise ValueError(f'Cannot add duplicate item `{item.name}`.')
