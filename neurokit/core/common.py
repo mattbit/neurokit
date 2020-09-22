@@ -16,11 +16,17 @@ class NamedItemsBag:
     def __getattr__(self, name):
         return self._items[name]
 
+    def __delattr__(self, name):
+        del self._items[name]
+
     def __getitem__(self, name):
         return self._items[name]
 
     def __setitem__(self, name, item):
         self._items[name] = item
+
+    def __delitem__(self, name):
+        del self._items[name]
 
     def __repr__(self):
         names = self._items.keys()
@@ -58,3 +64,6 @@ class NamedItemsBag:
                 f'Item `{item.name}` is not a valid `{self.dtype}` instance.')
 
         self._items[item.name] = item
+
+    def remove(self, name):
+        del self._items[name]
