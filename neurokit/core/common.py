@@ -29,9 +29,9 @@ class NamedItemsBag:
         del self._items[name]
 
     def __repr__(self):
-        names = self._items.keys()
+        names = list(self._items.keys())
         if len(names) > 4:
-            names = list(names[:4]) + ['…']
+            names = names[:4] + ['…']
         return f"<NamedItemsBag {{{', '.join(names)}}}>"
 
     def __len__(self):
