@@ -72,7 +72,7 @@ def write_hdf(recording: Recording, filename):
         patient_group.attrs.update((name, _encode_attr_val(val)) for (name, val) in patient_meta.items() if val is not None)
 
         # Timeseries
-        ts_group = f.create_group('timeseries')
+        ts_group = f.create_group('timeseries', track_order=True)
         for ts in recording.ts:
             g = ts_group.create_group(ts.name)
             g['data'] = ts.values
@@ -89,7 +89,7 @@ def write_hdf(recording: Recording, filename):
                 g.attrs['frequency'] = ts.frequency
 
         # Events
-        es_group = f.create_group('eventseries')
+        es_group = f.create_group('eventseries', track_order=True)
         es_dtype = np.dtype([
             ('start', np.float64),
             ('end', np.float64),
