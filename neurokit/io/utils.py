@@ -1,8 +1,34 @@
 from typing import Sequence
-from ..core.recording import Recording
+from collections import defaultdict
+from ..core.recording import Recording, BaseTimeSeries, TimeSeries
+from ..core.common import NamedItemsBag
 
 
-def merge_recordings(recordings: Sequence[Recording], **kwargs):
+def concatenate_time_series(series: Sequence[BaseTimeSeries]):
+    data = []
+    for s in series:
+        offset
+
+def concatenate_recordings(recordings: Sequence[Recording]):
+    if len(recordings) == 0:
+        raise ValueError('No recordings to concatenate')
+
+    if len(recordings) == 1:
+        return recordings[0]
+
+    # Timeseries
+    _ts = defaultdict(lambda: [])
+    for rec in recordings:
+        for series in rec.ts:
+            _ts[series.name].append(series)
+
+    ts = NamedItemsBag([concatenate_time_series(ss) for ss in _ts.values()],
+                       dtype=BaseTimeSeries)
+
+    # Events
+
+
+def merge_sequential_recordings(recordings: Sequence[Recording], **kwargs):
     """Merge sequential recordings.
 
     It uses the `recording.meta['date']` value to define if the objects
@@ -23,40 +49,50 @@ def merge_recordings(recordings: Sequence[Recording], **kwargs):
     # merge groups
     merged = []
     raise NotImplementedError('This method is not implemented yet!')
-    # for group in groups:
-    #     if len(group) < 2:
-    #         merged.append(group[0])
-    #         continue
-    #
-    #     data = pd.concat([r.data for r in group])
-    #     artifacts = pd.concat([r.artifacts for r in group])
-    #     annotations = pd.concat([r.annotations for r in group])
-    #
-    #     meta = {}
-    #     for r in group:
-    #         meta.update(r.meta)
-    #     ids = [r.id for r in group if r.id is not None]
-    #     res = np.array([r.meta['resolution'] for r in group]).max(axis=0)
-    #
-    #     meta.update({
-    #         'id': '+'.join(ids) if ids else None,
-    #         'frequency': group[0].frequency,
-    #         'resolution': res.tolist()
-    #     })
-    #
-    #     merged.append(Recording(data, annotations=annotations,
-    #                             artifacts=artifacts, meta=meta))
-    #
-    # return merged
+    for group in groups:
+        if len(group) < 2:
+            merged.append(group[0])
+            continue
+
+        # TimeSeries
+
+        data = pd.concat([r.data for r in group])
+        artifacts = pd.concat([r.artifacts for r in group])
+        annotations = pd.concat([r.annotations for r in group])
+
+        meta = {}
+        for r in group:
+            meta.update(r.meta)
+        ids = [r.id for r in group if r.id is not None]
+        res = np.array([r.meta['resolution'] for r in group]).max(axis=0)
+
+        meta.update({
+            'id': '+'.join(ids) if ids else None,
+            'frequency': group[0].frequency,
+            'resolution': res.tolist()
+        })
+
+        merged.append(Recording(data, annotations=annotations,
+                                artifacts=artifacts, meta=meta))
+
+    return merged
 
 
 def is_sequential_recording(recording: Recording, other: Recording, tol='auto'):
     """Check if recordings are compatible and sequential."""
-    if recording.data.frequency != other.data.frequency:
-        return False
+    shared_series = (set(s.name for s in recording.ts)
+                     & set(s.name for s in other.ts))
 
-    if recording.data.channels != other.data.channels:
-        return False
+    for name in shared_series:
+        s1, s2 = recording.ts[name], other.ts[name]
+
+        # No incompatible types (UnevenTimeSeries, TimeSeries)
+        if type(s1) != type(s2):
+            return False
+
+        # If not Uneven, frequency must match
+        if (isinstance(s1, TimeSeries) and s1.frequency != s2.frequency):
+            return False
 
     recording_end_date = (recording.meta['date'] + recording.data.duration)
     time_diff = (other.meta['date'] - recording_end_date).total_seconds()
