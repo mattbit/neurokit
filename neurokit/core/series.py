@@ -151,7 +151,7 @@ class TimeSeries(BaseTimeSeries):
 
     @property
     def frequency(self):
-        return round((len(self) - 1) / self.duration.total_seconds(), 9)
+        return round(len(self) / self.duration.total_seconds(), 9)
 
     @property
     def offset(self):
@@ -163,7 +163,7 @@ class TimeSeries(BaseTimeSeries):
 
     @property
     def duration(self):
-        return self.index[-1] - self.index[0]
+        return self.index[-1] - 2 * self.index[0] + self.index[1]
 
     def filter(  # skipcq: PYL-W0221
             self,

@@ -1,13 +1,10 @@
+import numpy as np
+import pandas as pd
 from typing import Sequence
 from collections import defaultdict
-from ..core.recording import Recording, BaseTimeSeries, TimeSeries
+from ..core.recording import Recording, BaseTimeSeries, TimeSeries, EventSeries
 from ..core.common import NamedItemsBag
 
-
-def concatenate_time_series(series: Sequence[BaseTimeSeries]):
-    data = []
-    for s in series:
-        offset
 
 def concatenate_recordings(recordings: Sequence[Recording]):
     if len(recordings) == 0:
@@ -16,16 +13,36 @@ def concatenate_recordings(recordings: Sequence[Recording]):
     if len(recordings) == 1:
         return recordings[0]
 
-    # Timeseries
+    # Calculate offsets with respect to the main timeseries.
+    offsets = np.cumsum([0] + [rec.duration for rec in recordings[:-1]])
+
     _ts = defaultdict(lambda: [])
-    for rec in recordings:
+    _es = defaultdict(lambda: [])
+    for rec, offset in zip(recordings, offsets):
+        # Timeseries
         for series in rec.ts:
-            _ts[series.name].append(series)
+            s = series.copy()
+            s.index += offset
+            _ts[s.name].append(s)
 
-    ts = NamedItemsBag([concatenate_time_series(ss) for ss in _ts.values()],
+        # Events
+        for events in rec.es:
+            e = events.data.copy()
+            e.start += offset
+            e.end += offset
+            _es[e.name].append(e)
+
+    ts = NamedItemsBag([pd.concatenate(ss) for ss in _ts.values()],
                        dtype=BaseTimeSeries)
+    es = NamedItemsBag([EventSeries(data=pd.concatenate(ee), name=name)
+                        for name, ee in _es.items()], dtype=EventSeries)
 
-    # Events
+    recording = recordings[0].copy()
+    recording.meta = dict(m for m in rec.meta.items() for rec in recordings)
+    recording.ts = ts
+    recording.es = es
+
+    return recording
 
 
 def merge_sequential_recordings(recordings: Sequence[Recording], **kwargs):
@@ -34,6 +51,11 @@ def merge_sequential_recordings(recordings: Sequence[Recording], **kwargs):
     It uses the `recording.meta['date']` value to define if the objects
     are sequential.
     """
+    for r in recordings:
+        if 'date' not in r.meta:
+            raise ValueError('Recordings must have a `meta[\'date\']`'
+                             'attribute to allow sequential merging.')
+
     recs = sorted(recordings, key=lambda r: r.meta['date'])
     groups = [[recs[0]]]
 
@@ -48,32 +70,9 @@ def merge_sequential_recordings(recordings: Sequence[Recording], **kwargs):
 
     # merge groups
     merged = []
-    raise NotImplementedError('This method is not implemented yet!')
+
     for group in groups:
-        if len(group) < 2:
-            merged.append(group[0])
-            continue
-
-        # TimeSeries
-
-        data = pd.concat([r.data for r in group])
-        artifacts = pd.concat([r.artifacts for r in group])
-        annotations = pd.concat([r.annotations for r in group])
-
-        meta = {}
-        for r in group:
-            meta.update(r.meta)
-        ids = [r.id for r in group if r.id is not None]
-        res = np.array([r.meta['resolution'] for r in group]).max(axis=0)
-
-        meta.update({
-            'id': '+'.join(ids) if ids else None,
-            'frequency': group[0].frequency,
-            'resolution': res.tolist()
-        })
-
-        merged.append(Recording(data, annotations=annotations,
-                                artifacts=artifacts, meta=meta))
+        merged.append(concatenate_recordings(group))
 
     return merged
 
