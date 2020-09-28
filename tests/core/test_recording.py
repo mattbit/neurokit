@@ -62,3 +62,10 @@ def test_artifacts_to_nan():
     assert rec_with_nan.data.loc['1s':'2s', 'CH2'].isna().all()
     assert not rec_with_nan.data.loc['3s':'4.49s', 'CH2'].isna().any()
     assert rec_with_nan.data.loc['4.5s':'7s', 'CH2'].isna().all()
+
+
+def test_duration():
+    rec = simulated_eeg_recording(channels=['CH1', 'CH2'], duration=10,
+                                  frequency=100)
+    assert len(rec.data) == 1000
+    assert rec.duration.total_seconds() == 10
