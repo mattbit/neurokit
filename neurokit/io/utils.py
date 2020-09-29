@@ -14,7 +14,8 @@ def concatenate_recordings(recordings: Sequence[Recording]):
         return recordings[0]
 
     # Calculate offsets with respect to the main timeseries.
-    offsets = np.cumsum([pd.Timedelta(0)] + [rec.duration for rec in recordings[:-1]])
+    offsets = np.cumsum([pd.Timedelta(0)]
+                        + [rec.duration for rec in recordings[:-1]])
 
     _ts = defaultdict(lambda: [])
     _es = defaultdict(lambda: [])
