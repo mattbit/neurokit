@@ -83,10 +83,11 @@ def merge_sequential_recordings(recordings: Sequence[Recording], **kwargs):
     return merged
 
 
-def is_sequential_recording(recording: Recording, other: Recording, tol='auto'):
+def is_sequential_recording(recording: Recording,
+                            other: Recording,
+                            tol='auto'):
     """Check if recordings are compatible and sequential."""
-    shared_series = (set(s.name for s in recording.ts)
-                     & set(s.name for s in other.ts))
+    shared_series = {s.name for s in recording.ts} & {s.name for s in other.ts}
 
     for name in shared_series:
         s1, s2 = recording.ts[name], other.ts[name]
