@@ -14,7 +14,7 @@ def concatenate_recordings(recordings: Sequence[Recording]):
         return recordings[0]
 
     # Calculate offsets with respect to the main timeseries.
-    offsets = np.cumsum([0] + [rec.duration for rec in recordings[:-1]])
+    offsets = np.cumsum([pd.Timedelta(0)] + [rec.duration for rec in recordings[:-1]])
 
     _ts = defaultdict(lambda: [])
     _es = defaultdict(lambda: [])
@@ -30,11 +30,16 @@ def concatenate_recordings(recordings: Sequence[Recording]):
             e = events.data.copy()
             e.start += offset
             e.end += offset
-            _es[e.name].append(e)
+            _es[events.name].append(e)
 
-    ts = NamedItemsBag([pd.concatenate(ss) for ss in _ts.values()],
-                       dtype=BaseTimeSeries)
-    es = NamedItemsBag([EventSeries(data=pd.concatenate(ee), name=name)
+    _finalized_ts = []
+    for name, ss in _ts.items():
+        series = pd.concat(ss)
+        series.name = name
+        _finalized_ts.append(series)
+
+    ts = NamedItemsBag(_finalized_ts, dtype=BaseTimeSeries)
+    es = NamedItemsBag([EventSeries(data=pd.concat(ee), name=name)
                         for name, ee in _es.items()], dtype=EventSeries)
 
     recording = recordings[0].copy()
