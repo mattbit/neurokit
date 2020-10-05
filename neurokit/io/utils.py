@@ -2,8 +2,10 @@ import numpy as np
 import pandas as pd
 from typing import Sequence
 from collections import defaultdict
+
 from ..core.recording import Recording, BaseTimeSeries, TimeSeries, EventSeries
 from ..core.common import NamedItemsBag
+from ..utils import mask_to_intervals
 
 
 def concatenate_recordings(recordings: Sequence[Recording]):
@@ -43,8 +45,19 @@ def concatenate_recordings(recordings: Sequence[Recording]):
     es = NamedItemsBag([EventSeries(data=pd.concat(ee), name=name)
                         for name, ee in _es.items()], dtype=EventSeries)
 
+    # Prepare recording with meta
     recording = recordings[0].copy()
-    recording.meta = dict(m for m in rec.meta.items() for rec in recordings)
+    for rec in reversed(recordings):
+        recording.meta.update(rec.meta)
+
+    # ensure correct start date
+    if 'date' in recordings[0].meta:
+        recording.meta['date'] = recordings[0].meta['date']
+
+    # use max resolution
+    resolutions = [rec.meta.get('resolution', []) for rec in recordings]
+    recording.meta['resolution'] = np.max(resolutions, axis=0)
+
     recording.ts = ts
     recording.es = es
 
@@ -112,58 +125,57 @@ def is_sequential_recording(recording: Recording,
 
 
 def split_recording(recording, times):
-    """Split recording at given time or timedelta."""
-    raise NotImplementedError('The method is not implemented yet')
-    # if not times:
-    #     return [recording]
-    #
-    # times = [None] + list(_ensure_sequence(times)) + [None]
-    #
-    # return [recording[start:end] for start, end in zip(times[:-1], times[1:])]
+    """Split recording at given time."""
+    if not times:
+        return [recording.copy()]
+
+    if not isinstance(times, Sequence):
+        times = [times]
+
+    times = [None] + list(times) + [None]
+
+    return [recording.slice(start, end)
+            for start, end in zip(times[:-1], times[1:])]
 
 
 def detect_empty_signal(recording):
     """Detect all zeros, electrodes unbranched segments."""
-    raise NotImplementedError('The method is not implemented yet')
-    # power = recording.data.values ** 2
-    # eps = (np.array(recording.meta['resolution']) / 2)[np.newaxis]
-    #
-    # return (power < eps ** 2).sum(axis=1) == recording.data.shape[1]
+    power = recording.data.values ** 2
+    eps = (np.array(recording.meta['resolution']) / 2)[np.newaxis]
+
+    return (power < eps ** 2).sum(axis=1) == recording.data.shape[1]
 
 
 def trim_empty(recording):
-    raise NotImplementedError('The method is not implemented yet')
-    #
-    # empty_signal = detect_empty_signal(recording)
-    # intervals = mask_to_intervals(empty_signal)
-    #
-    # if len(intervals) == 0:
-    #     return recording.copy()
-    #
-    # start = recording.data.index.min()
-    # end = recording.data.index.max()
-    #
-    # if intervals[0][0] == 0:
-    #     start = recording.data.index[intervals[0][1] - 1]
-    #
-    # if intervals[-1][1] == len(recording.data):
-    #     end = recording.data.index[intervals[-1][0]]
-    #
-    # return recording[start:end].copy()
+    empty_signal = detect_empty_signal(recording)
+    intervals = mask_to_intervals(empty_signal)
+
+    if len(intervals) == 0:
+        return recording.copy()
+
+    start = None
+    end = None
+
+    if intervals[0][0] == 0:
+        start = recording.data.index[intervals[0][1] - 1]
+
+    if intervals[-1][1] == len(recording.data):
+        end = recording.data.index[intervals[-1][0]]
+
+    return recording.slice(start, end)
 
 
 def split_in_segments(recording, min_break=300, trim=True):
-    raise NotImplementedError('The method is not implemented yet')
     # Detect breaks (all zero, electrodes unbranched)
-    # empty_signal = detect_empty_signal(recording)
-    #
-    # breakpoints = []
-    # for start, end in mask_to_intervals(empty_signal, index=recording.data.index):
-    #     if (end - start).total_seconds() >= min_break:
-    #         breakpoints.append(start + (end - start) / 2)
-    #
-    # segments = split_recording(recording, breakpoints)
-    # if trim:
-    #     return [trim_empty(s) for s in segments]
-    #
-    # return segments
+    no_signal = detect_empty_signal(recording)
+
+    breakpoints = []
+    for start, end in mask_to_intervals(no_signal, index=recording.data.index):
+        if (end - start).total_seconds() >= min_break:
+            breakpoints.append(start + (end - start) / 2)
+
+    segments = split_recording(recording, breakpoints)
+    if trim:
+        return [trim_empty(s) for s in segments]
+
+    return segments
