@@ -32,8 +32,9 @@ class EventSeries:
         if not is_timedelta64_dtype(self.data['end']):
             self.data['end'] = pd.to_timedelta(self.data['end'], unit='s')
 
-        self.data = self.data.set_index(
-            EventSeries.__index, drop=False).sort_index()
+        self.data.index = pd.MultiIndex.from_frame(
+            self.data.loc[:, EventSeries.__index])
+        self.data.sort_index(inplace=True)
 
     def add(self, start, end=None, channel=None, code=None, description=None):
         start = _maybe_cast_timedelta(start)
@@ -95,7 +96,17 @@ class EventSeries:
             start = _maybe_cast_timedelta(key.start)
             stop = _maybe_cast_timedelta(key.stop)
 
-            data = self.data.loc[(None, start):(stop, None):key.step]
+            idx = np.ones(len(self.data), dtype=bool)
+
+            if start is not None:
+                end_idx = self.data.index.get_level_values('end')
+                idx &= end_idx > start
+
+            if stop is not None:
+                start_idx = self.data.index.get_level_values('start')
+                idx &= start_idx < stop
+
+            data = self.data.loc[idx].loc[::key.step]
 
             return EventSeries(data, name=self.name)
 
