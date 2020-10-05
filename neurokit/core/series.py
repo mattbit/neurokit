@@ -19,28 +19,29 @@ def _maybe_cast_timedelta(obj, unit='s'):
 
 class EventSeries:
     """A frame of events."""
-    __cols = ['start', 'end', 'channel', 'code', 'description']
-    __index = ['start', 'end']
+    _cols = ['start', 'end', 'channel', 'code', 'description']
+    _index = ['start', 'end']
 
     def __init__(self, data=None, name=None):
         self.name = name
         self.data = pd.DataFrame([] if data is None else data,
-                                 columns=EventSeries.__cols)
+                                 columns=self._cols)
 
         if not is_timedelta64_dtype(self.data['start']):
             self.data['start'] = pd.to_timedelta(self.data['start'], unit='s')
         if not is_timedelta64_dtype(self.data['end']):
             self.data['end'] = pd.to_timedelta(self.data['end'], unit='s')
 
-        self.data = self.data.set_index(
-            EventSeries.__index, drop=False).sort_index()
+        self.data.index = pd.MultiIndex.from_frame(
+            self.data.loc[:, self._index])
+        self.data.sort_index(inplace=True)
 
     def add(self, start, end=None, channel=None, code=None, description=None):
         start = _maybe_cast_timedelta(start)
         end = _maybe_cast_timedelta(end)
 
         event = pd.Series(data=[start, end, channel, code, description],
-                          index=EventSeries.__cols,
+                          index=self._cols,
                           name=(start, end))
         self.data = self.data.append(event, ignore_index=False).sort_index()
 
@@ -66,13 +67,13 @@ class EventSeries:
 
     @classmethod
     def from_dict(cls, data):
-        events = [e for e in data.get('events', [])]
+        events = list(data.get('events', []))
         for e in events:
             if not isinstance(e['start'], pd.Timedelta):
                 e['start'] = pd.to_timedelta(e['start'], unit='ns')
             if not isinstance(e['end'], pd.Timedelta):
                 e['end'] = pd.to_timedelta(e['end'], unit='ns')
-        df = pd.DataFrame(events, columns=cls.__cols)
+        df = pd.DataFrame(events, columns=cls._cols)
         return cls(data=df, name=data.get('name'))
 
     def __copy__(self):
@@ -95,7 +96,17 @@ class EventSeries:
             start = _maybe_cast_timedelta(key.start)
             stop = _maybe_cast_timedelta(key.stop)
 
-            data = self.data.loc[(None, start):(stop, None):key.step]
+            idx = np.ones(len(self.data), dtype=bool)
+
+            if start is not None:
+                end_idx = self.data.index.get_level_values('end')
+                idx &= end_idx > start
+
+            if stop is not None:
+                start_idx = self.data.index.get_level_values('start')
+                idx &= start_idx < stop
+
+            data = self.data.loc[idx].loc[::key.step]
 
             return EventSeries(data, name=self.name)
 
@@ -151,7 +162,7 @@ class TimeSeries(BaseTimeSeries):
 
     @property
     def frequency(self):
-        return round((len(self) - 1) / self.duration.total_seconds(), 9)
+        return round(len(self) / self.duration.total_seconds(), 9)
 
     @property
     def offset(self):
@@ -163,7 +174,7 @@ class TimeSeries(BaseTimeSeries):
 
     @property
     def duration(self):
-        return self.index[-1] - self.index[0]
+        return self.index[-1] - 2 * self.index[0] + self.index[1]
 
     def filter(  # skipcq: PYL-W0221
             self,

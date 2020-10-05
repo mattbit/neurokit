@@ -51,6 +51,15 @@ def test_event_series_slicing():
     assert len(events[0.:3.]) == 4
     assert events[0:3].data.iloc[-1].code == 'TEST3'
 
+    assert len(events[3:]) == 4
+    assert len(events[5:]) == 1
+    assert len(events[6:]) == 1
+
+
+def test_empty_event_series_slicing():
+    events = EventSeries(name='test_events')
+    assert len(events[:3]) == 0
+
 
 def test_event_add():
     events = EventSeries(test_events, name='test_events')

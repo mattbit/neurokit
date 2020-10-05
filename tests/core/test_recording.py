@@ -62,3 +62,36 @@ def test_artifacts_to_nan():
     assert rec_with_nan.data.loc['1s':'2s', 'CH2'].isna().all()
     assert not rec_with_nan.data.loc['3s':'4.49s', 'CH2'].isna().any()
     assert rec_with_nan.data.loc['4.5s':'7s', 'CH2'].isna().all()
+
+
+def test_duration():
+    rec = simulated_eeg_recording(channels=['CH1', 'CH2'], duration=10,
+                                  frequency=100)
+    assert len(rec.data) == 1000
+    assert rec.duration.total_seconds() == 10
+
+
+def test_slice():
+    rec = simulated_eeg_recording(channels=['CH1', 'CH2'], duration=10,
+                                  frequency=100)
+    rec.es.add(EventSeries(name='annotations'))
+    rec.es.annotations.add(2, 3, description='test start')
+    rec.es.annotations.add(4, 6, description='test middle')
+    rec.es.annotations.add(7, 8, description='test end')
+
+    assert len(rec.data) == 1000
+    assert rec.duration.total_seconds() == 10
+
+    rec1 = rec.slice(0, 5)
+    rec2 = rec.slice(5, 10)
+
+    assert len(rec1.data) == 501  # note that the 5 s sample is included
+    assert len(rec2.data) == 500
+
+    assert len(rec1.es.annotations) == 2
+    assert rec1.es.annotations.data.iloc[0].description == 'test start'
+    assert rec1.es.annotations.data.iloc[1].description == 'test middle'
+
+    assert len(rec2.es.annotations) == 2
+    assert rec2.es.annotations.data.iloc[0].description == 'test middle'
+    assert rec2.es.annotations.data.iloc[1].description == 'test end'
