@@ -19,13 +19,13 @@ def _maybe_cast_timedelta(obj, unit='s'):
 
 class EventSeries:
     """A frame of events."""
-    __cols = ['start', 'end', 'channel', 'code', 'description']
-    __index = ['start', 'end']
+    _cols = ['start', 'end', 'channel', 'code', 'description']
+    _index = ['start', 'end']
 
     def __init__(self, data=None, name=None):
         self.name = name
         self.data = pd.DataFrame([] if data is None else data,
-                                 columns=self.__cols)
+                                 columns=self._cols)
 
         if not is_timedelta64_dtype(self.data['start']):
             self.data['start'] = pd.to_timedelta(self.data['start'], unit='s')
@@ -33,7 +33,7 @@ class EventSeries:
             self.data['end'] = pd.to_timedelta(self.data['end'], unit='s')
 
         self.data.index = pd.MultiIndex.from_frame(
-            self.data.loc[:, self.__index])
+            self.data.loc[:, self._index])
         self.data.sort_index(inplace=True)
 
     def add(self, start, end=None, channel=None, code=None, description=None):
@@ -41,7 +41,7 @@ class EventSeries:
         end = _maybe_cast_timedelta(end)
 
         event = pd.Series(data=[start, end, channel, code, description],
-                          index=self.__cols,
+                          index=self._cols,
                           name=(start, end))
         self.data = self.data.append(event, ignore_index=False).sort_index()
 
@@ -73,7 +73,7 @@ class EventSeries:
                 e['start'] = pd.to_timedelta(e['start'], unit='ns')
             if not isinstance(e['end'], pd.Timedelta):
                 e['end'] = pd.to_timedelta(e['end'], unit='ns')
-        df = pd.DataFrame(events, columns=cls.__cols)
+        df = pd.DataFrame(events, columns=cls._cols)
         return cls(data=df, name=data.get('name'))
 
     def __copy__(self):
