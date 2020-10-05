@@ -25,7 +25,7 @@ class EventSeries:
     def __init__(self, data=None, name=None):
         self.name = name
         self.data = pd.DataFrame([] if data is None else data,
-                                 columns=EventSeries.__cols)
+                                 columns=self.__cols)
 
         if not is_timedelta64_dtype(self.data['start']):
             self.data['start'] = pd.to_timedelta(self.data['start'], unit='s')
@@ -33,7 +33,7 @@ class EventSeries:
             self.data['end'] = pd.to_timedelta(self.data['end'], unit='s')
 
         self.data.index = pd.MultiIndex.from_frame(
-            self.data.loc[:, EventSeries.__index])
+            self.data.loc[:, self.__index])
         self.data.sort_index(inplace=True)
 
     def add(self, start, end=None, channel=None, code=None, description=None):
@@ -41,7 +41,7 @@ class EventSeries:
         end = _maybe_cast_timedelta(end)
 
         event = pd.Series(data=[start, end, channel, code, description],
-                          index=EventSeries.__cols,
+                          index=self.__cols,
                           name=(start, end))
         self.data = self.data.append(event, ignore_index=False).sort_index()
 
