@@ -9,6 +9,7 @@ import scipy.ndimage as ndi
 from ..utils import mask_to_intervals
 from ..io.utils import detect_empty_signal
 from ..preprocessing import detect_signal_artifacts
+from ..preprocessing import ConstantSignalDetector, HighAmplitudeDetector
 
 
 def detect_scale_changes(recording, channels=None, merge_interval=1):
@@ -57,25 +58,23 @@ def detect_scale_changes(recording, channels=None, merge_interval=1):
                 pre_mask = np.zeros(len(pre_vals), dtype=bool)
                 for ch in range(pre_vals.shape[1]):
                     _raw_rms = np.sqrt((pre_vals[:, ch] ** 2).mean())
-                    _options = {
-                        'clipped': None,
-                        'isoelectrical': None,
-                        'amplitude': dict(low=_raw_rms, high=3 * _raw_rms)
-                    }
+                    _detectors = [
+                        ConstantSignalDetector(),
+                        HighAmplitudeDetector(low=_raw_rms, high=3 * _raw_rms)
+                    ]
                     pre_mask |= detect_signal_artifacts(
-                        pre_vals[:, ch], _options)
+                        pre_vals[:, ch], _detectors)
                 _pre_vals = pre_vals[~pre_mask]
 
                 post_mask = np.zeros(len(post_vals), dtype=bool)
                 for ch in range(post_vals.shape[1]):
                     _raw_rms = np.sqrt((post_vals[:, ch] ** 2).mean())
-                    _options = {
-                        'clipped': None,
-                        'isoelectrical': None,
-                        'amplitude': dict(low=_raw_rms, high=3 * _raw_rms)
-                    }
+                    _detectors = [
+                        ConstantSignalDetector(),
+                        HighAmplitudeDetector(low=_raw_rms, high=3 * _raw_rms)
+                    ]
                     post_mask |= detect_signal_artifacts(
-                        post_vals[:, ch], _options)
+                        post_vals[:, ch], _detectors)
                 _post_vals = post_vals[~post_mask]
 
                 # Robust scale estimator: MAD
@@ -170,10 +169,11 @@ def scale_changes_correction(recording, base_scale=5, logfile=None, **kwargs):
 
     if logfile is not None:
         with open(logfile, 'w+') as f:
-            f.write(f'SEDLINE SCALE CHANGE {recording.start_date}\n')
+            f.write(f'SEDLINE SCALE CHANGE {recording.meta["date"]}\n')
 
             for det, s1, s2 in zip(detections, scales[:-1], scales[1:]):
                 if s1 != s2:
-                    f.write(f'{det["start"]}: {s1} µV/mm → {s2} µV/mm\n')
+                    det_time = recording.meta['date'] + det['start']
+                    f.write(f'{det_time}: {s1} µV/mm → {s2} µV/mm\n')
 
     return fixed
