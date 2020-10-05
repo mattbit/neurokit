@@ -67,7 +67,7 @@ class EventSeries:
 
     @classmethod
     def from_dict(cls, data):
-        events = data.get('events', [])
+        events = list(data.get('events', []))
         for e in events:
             if not isinstance(e['start'], pd.Timedelta):
                 e['start'] = pd.to_timedelta(e['start'], unit='ns')
