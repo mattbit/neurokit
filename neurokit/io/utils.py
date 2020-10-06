@@ -179,3 +179,21 @@ def split_in_segments(recording, min_break=300, trim=True):
         return [trim_empty(s) for s in segments]
 
     return segments
+
+
+def reset_offset(recording):
+    rec = recording.copy()
+    offset = rec.data.index.min()
+
+    for ts in rec.ts:
+        ts.index -= offset
+
+    for es in rec.es:
+        es.data.start -= offset
+        es.data.end -= offset
+        es.index = pd.MultiIndex.from_frame(es.data.loc[:, ('start', 'end')])
+
+    if 'date' in rec.meta:
+        rec.meta['date'] += offset
+
+    return rec
