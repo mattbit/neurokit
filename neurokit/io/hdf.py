@@ -30,7 +30,7 @@ def _parse_es_group(group, name):
 
 def _encode_attr_val(value):
     if isinstance(value, datetime.datetime):
-        return value.utcnow().isoformat()
+        return value.isoformat()
     if isinstance(value, datetime.timedelta):
         return pd.Timedelta(value).total_seconds()
 
@@ -52,6 +52,10 @@ def read_hdf(filename):
               for ts_name, ts_group in f['timeseries'].items()]
         es = [_parse_es_group(es_group, es_name)
               for es_name, es_group in f['eventseries'].items()]
+
+        # Convert special metadata (date)
+        if 'date' in meta:
+            meta['date'] = pd.to_datetime(meta['date'])
 
     return Recording(name=name, timeseries=ts, events=es,
                      patient=patient, meta=meta)
