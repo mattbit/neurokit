@@ -128,7 +128,6 @@ def test_detect_alpha_suppressions(n):
 
 @pytest.mark.parametrize('n', range(5))
 def test_no_ies_as_alpha(n):
-    n = 4
     rec = read_hdf(f'tests/data/suppressions/ies_{n:02}.h5')
 
     ts = rec.data.index.total_seconds()
