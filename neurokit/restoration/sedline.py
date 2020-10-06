@@ -26,7 +26,7 @@ def detect_scale_changes(recording, channels=None, merge_interval=1):
     if not intervals:
         return []
 
-    if merge_interval and merge_interval > 0:
+    if merge_interval > 0:
         merged = [intervals[0]]
         for interval in intervals[1:]:
             if (interval[0] - merged[-1][1]).total_seconds() < merge_interval:
@@ -112,9 +112,12 @@ def detect_scale_changes(recording, channels=None, merge_interval=1):
     return detections
 
 
-def find_best_scale_sequence(detections, scales=None):
+def find_best_scale_sequence(detections, scales=None, known_states=None):
     if scales is None:
         scales = [5, 10, 25, 50]
+
+    if known_states is None:
+        known_states = []
 
     if not detections:
         raise Exception('No scale change detections specified!')
@@ -144,18 +147,44 @@ def find_best_scale_sequence(detections, scales=None):
 
     T.add_edges_from([((num_det, s), 'target') for s in scales], weight=0)
 
+    # If there are known states, drop the nodes
+    intervals = list(zip([None] + [d['end'] for d in detections],
+                         [d['start'] for d in detections] + [None]))
+
+    for k_time, k_scale in known_states:
+        try:
+            n = next(n for n, i in enumerate(intervals)
+                     if _in_interval(k_time, i))
+            for s in scales:
+                if s != k_scale and (n, s) in T.nodes:
+                    T.remove_node((n, s))
+        except StopIteration:
+            pass
+
     shortest_path = nx.shortest_path(T, 'source', 'target', weight='loss')
 
     return [scale for _, scale in shortest_path[1:-1]]
 
 
-def scale_changes_correction(recording, base_scale=5, logfile=None, **kwargs):
+def _in_interval(time, interval):
+    start, end = interval
+    if start is None:
+        return time < end
+    if end is None:
+        return time > start
+
+    return (time > start) & (time < end)
+
+
+def scale_changes_correction(recording, base_scale=5, logfile=None,
+                             scales=None, known_states=None, **kwargs):
     fixed = recording.copy()
     detections = detect_scale_changes(recording, **kwargs)
+
     if not detections:
         return fixed
 
-    scales = find_best_scale_sequence(detections)
+    scales = find_best_scale_sequence(detections, scales, known_states)
 
     starts = [recording.data.index.min()] + [d['start'] for d in detections]
     ends = [d['end'] for d in detections] + [recording.data.index.max()]
