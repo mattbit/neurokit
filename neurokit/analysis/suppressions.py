@@ -7,8 +7,9 @@ import math
 import numpy as np
 import pandas as pd
 from typing import Sequence, Tuple
-from scipy.ndimage.morphology import binary_dilation, binary_erosion
 from scipy.signal import savgol_filter
+from scipy.ndimage.morphology import binary_opening
+from scipy.ndimage.morphology import binary_dilation, binary_erosion
 
 from ..core import Recording
 from ..utils import mask_to_intervals
@@ -133,7 +134,7 @@ def _detect_alpha_suppressions(
     rec = recording.copy()
     rec.data = recording.data.loc[:, channels]
     channel_rms = np.sqrt(np.mean(rec.data.values**2, axis=0))
-    normalized_channels = rec.data.dot(np.diag(1/channel_rms))
+    normalized_channels = rec.data.dot(np.diag(1 / channel_rms))
     rec.data.loc[:, :] = normalized_channels.values
     filtered = rec.filter(*frequency_band)
     return _detect_suppressions(filtered, threshold=threshold)
@@ -144,21 +145,22 @@ class SuppressionAnalyzer:
 
     def __init__(self, recording: Recording):
         self.recording = recording
-        self._ies_detections = None
-        self._alpha_detections = None
-        self._ies_mask = None
+        self.ies_detections_ = None
+        self.alpha_detections_ = None
+        self.ies_mask_ = None
+        self.alpha_mask_ = None
 
     def detect_ies(self, **kwargs):
-        self._ies_mask = _detect_suppressions(self.recording, **kwargs)
+        self.ies_mask_ = _detect_suppressions(self.recording, **kwargs)
         intervals = mask_to_intervals(
-            self._ies_mask, self.recording.data.index)
+            self.ies_mask_, self.recording.data.index)
         detections = [{'start': start,
                        'end': end,
                        'channel': None,
                        'description': 'IES'}
                       for start, end in intervals]
-        self._ies_detections = pd.DataFrame(detections)
-        return self._ies_detections
+        self.ies_detections_ = pd.DataFrame(detections)
+        return self.ies_detections_
 
     def detect_alpha_suppressions(
             self,
@@ -182,15 +184,21 @@ class SuppressionAnalyzer:
         detections : pandas.DataFrame
             The detected α-suppressions.
         """
-        if self._ies_mask is None:
-            self._ies_mask = _detect_suppressions(
+        if self.ies_mask_ is None:
+            self.ies_mask_ = _detect_suppressions(
                 self.recording, min_duration=2.5)
 
         rec = self.recording.copy()
         alpha_mask = _detect_alpha_suppressions(
             rec, channels, frequency_band, threshold)
 
-        alpha_mask[self._ies_mask] = False
+        alpha_mask[self.ies_mask_] = False
+
+        # We need to re-apply the minimum duration filter to remove the short
+        # alpha suppressions which may result from the subtraction of IES.
+        min_length = math.floor(rec.frequency)
+        alpha_mask = binary_opening(alpha_mask, np.ones(min_length))
+
         intervals = mask_to_intervals(alpha_mask, self.recording.data.index)
         detections = [{'start': start,
                        'end': end,
@@ -198,6 +206,7 @@ class SuppressionAnalyzer:
                        'description': 'alpha_suppression'}
                       for start, end in intervals]
 
-        self._alpha_detections = pd.DataFrame(detections)
+        self.alpha_mask_ = alpha_mask
+        self.alpha_detections_ = pd.DataFrame(detections)
 
-        return self._alpha_detections
+        return self.alpha_detections_
