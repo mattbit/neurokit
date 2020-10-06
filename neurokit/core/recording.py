@@ -235,11 +235,11 @@ class Recording:
         if end is not None and not isinstance(end, pd.Timedelta):
             end = pd.to_timedelta(end, unit='s')
 
-        timeseries = NamedItemsBag([ts.loc[start:end] for ts in self.ts])
-        events = NamedItemsBag([es[start:end] for es in self.es])
+        rec = self.copy()
+        rec.ts = NamedItemsBag([ts.loc[start:end] for ts in self.ts])
+        rec.es = NamedItemsBag([es[start:end] for es in self.es])
 
-        return Recording(name=self.name, meta=self.meta, patient=self.patient,
-                         timeseries=timeseries, events=events)
+        return rec
 
     def __copy__(self):
         return Recording(name=self.name,
