@@ -1,6 +1,8 @@
 import tempfile
 from pathlib import Path
 from neurokit.io import hdf
+from datetime import datetime
+import pandas as pd
 
 
 def test_read_hdf():
@@ -28,6 +30,8 @@ def test_read_hdf():
     assert events[1].channel == 'CH2'
     assert events[1].code == 'test2'
 
+    assert rec.meta['date'] == pd.to_datetime('2020-01-15 10:05')
+
 
 def test_write_hdf():
     rec = hdf.read_hdf('tests/data/test.hdf')
@@ -42,3 +46,5 @@ def test_write_hdf():
     assert rec.data.frequency == new_rec.data.frequency
     assert len(rec.data.channels) == len(new_rec.data.channels)
     assert rec.data.channels[0] == new_rec.data.channels[0]
+    assert isinstance(rec.meta['date'], datetime)
+    assert rec.meta['date'] == pd.to_datetime('2020-01-15 10:05')
