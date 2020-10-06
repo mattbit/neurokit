@@ -80,6 +80,9 @@ class ClippedSignalDetector(ArtifactDetector):
        Convention 141 (2016).
     """
 
+    def __init__(self, min_bins=100):
+        self.min_bins = min_bins
+
     def detect(self, signal: np.ndarray) -> np.ndarray:
         low_clip, high_clip = self.detect_levels(signal)
 
@@ -96,7 +99,7 @@ class ClippedSignalDetector(ArtifactDetector):
         # Guess a sensible number of bins
         valid_signal = signal[~np.isnan(signal)]
         values = np.unique(valid_signal)
-        if values.size < 100:
+        if values.size < self.min_bins:
             raise ValueError("Not enough unique values to detect clipping.")
         num_bins = min(values.size, 65536)
 
