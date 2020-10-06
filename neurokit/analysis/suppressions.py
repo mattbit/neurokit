@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from typing import Sequence, Tuple
 from scipy.signal import savgol_filter
+from scipy.ndimage.morphology import binary_opening
 from scipy.ndimage.morphology import binary_dilation, binary_erosion
 
 from ..core import Recording
@@ -193,6 +194,11 @@ class SuppressionAnalyzer:
 
         alpha_mask[self.ies_mask_] = False
 
+        # We need to re-apply the minimum duration filter to remove the short
+        # alpha suppressions which may result from the subtraction of IES.
+        min_length = math.floor(rec.frequency)
+        alpha_mask = binary_opening(alpha_mask, np.ones(min_length))
+
         intervals = mask_to_intervals(alpha_mask, self.recording.data.index)
         detections = [{'start': start,
                        'end': end,
@@ -200,6 +206,7 @@ class SuppressionAnalyzer:
                        'description': 'alpha_suppression'}
                       for start, end in intervals]
 
+        self.alpha_mask_ = alpha_mask
         self.alpha_detections_ = pd.DataFrame(detections)
 
         return self.alpha_detections_
