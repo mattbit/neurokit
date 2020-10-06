@@ -1,9 +1,27 @@
+"""Test iso-electric suppression detection and alpha suppression detection.
+
+
+
+The code used to generate the test recordings is:
+```
+# Iso-electric suppression tests
+rec = simulated_eeg_recording(channels=1, duration=10, frequency=100)
+rec = rec.filter(0.5, None)
+
+# α-suppression tests
+rec = simulated_eeg_recording(channels=['EEG_1'], duration=10,
+                              frequency=fs, amplitude=80, theta=2.75)
+rec = rec.filter(0.25)
+```
+
+"""
 import pytest
 import numpy as np
 import pandas as pd
 from unittest.mock import patch
 
 from neurokit import EventSeries
+from neurokit.io import read_hdf
 from neurokit.sim import simulated_eeg_recording
 from neurokit.analysis.suppressions import SuppressionAnalyzer
 
@@ -21,10 +39,9 @@ def test_detect_ies(detect_suppressions_mock):
     assert detections == 'TEST'
 
 
-@pytest.mark.repeat(10)
-def test_detect_suppressions():
-    rec = simulated_eeg_recording(channels=1, duration=10, frequency=100)
-    rec = rec.filter(0.5, None)
+@pytest.mark.parametrize('n', range(5))
+def test_detect_suppressions(n):
+    rec = read_hdf(f'tests/data/suppressions/ies_{n:02}.h5')
 
     # We must start with no suppressions
     analyzer = SuppressionAnalyzer(rec)
@@ -64,14 +81,11 @@ def test_detect_suppressions():
     assert 2.48 * sec <= detections.loc[0].end <= 3.5 * sec
 
 
-@pytest.mark.repeat(10)
-def test_detect_alpha_suppressions():
-    # Generate a weak recording
-    fs = 200
-    rec = simulated_eeg_recording(channels=['EEG_1'], duration=10,
-                                  frequency=fs, amplitude=80, theta=2.75)
-    rec = rec.filter(0.25)
+@pytest.mark.parametrize('n', range(5))
+def test_detect_alpha_suppressions(n):
+    rec = read_hdf(f'tests/data/suppressions/as_{n:02}.h5')
 
+    fs = int(rec.data.frequency)
     ts = rec.data.index.total_seconds().values
 
     # Add a strong alpha wave
@@ -112,13 +126,15 @@ def test_detect_alpha_suppressions():
     assert 5.5 * sec <= detections.loc[1].end <= 6.25 * sec
 
 
-def test_no_ies_as_alpha():
-    rec = simulated_eeg_recording(channels=1, duration=10, frequency=100)
-    rec = rec.filter(0.5, None)
+@pytest.mark.parametrize('n', range(5))
+def test_no_ies_as_alpha(n):
+    n = 4
+    rec = read_hdf(f'tests/data/suppressions/ies_{n:02}.h5')
+
     ts = rec.data.index.total_seconds()
     alpha_band = 60 * np.cos(2 * np.pi * 9.8 * ts)
     rec.data.loc[:, 'EEG_1'] += alpha_band
-    rec.data.iloc[200:350] = 0
+    rec.data.iloc[200:350] /= 100
     analyzer = SuppressionAnalyzer(rec)
     ies_detections = analyzer.detect_ies(threshold=8.)
 
