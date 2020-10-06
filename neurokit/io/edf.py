@@ -36,7 +36,7 @@ def write_edf(recording, path, artifacts=False):
         # writer.setPatientAdditional(patient_info)
 
         if 'date' in recording.meta:
-            start_date = recording.meta['date']
+            start_date = recording.meta['date'] + recording.data.index.min()
         else:
             start_date = datetime.datetime.fromtimestamp(0)
         writer.setStartdatetime(start_date)
