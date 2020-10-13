@@ -93,3 +93,27 @@ def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
             D = D / np.sqrt(np.sum(D**2, 0))  # normalize
 
     return D, A
+
+
+def declip_signal(signal, low, high, frame_size=256, step_size=64):
+    signal_len = len(signal)
+
+    if signal_len % frame_size != 0:
+        signal = np.pad(signal, (0, frame_size - signal_len % frame_size))
+
+    frames = create_frames(signal, frame_size, step_size, window='hamming')
+
+    clipping_mask = 1 * (signal >= high) - 1 * (signal <= low)
+    M = create_frames(clipping_mask, frame_size, step_size)
+
+    D, A = consistent_dictionary_learning(frames, M, 32, 20, 20,
+                                          num_iterations=50)
+
+    reconstructed_frames = (D @ A).T
+    reconstructed = create_signal(reconstructed_frames, step_size,
+                                  window='hamming')
+
+    declipped = signal.copy()
+    declipped[clipping_mask != 0] == reconstructed[clipping_mask != 0]
+
+    return reconstructed[:signal_len]
