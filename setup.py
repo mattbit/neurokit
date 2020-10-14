@@ -17,7 +17,6 @@ setuptools.setup(
         'numpy',
         'pandas>=1.1.0,<1.2',
         'scipy',
-        'fastparquet',
         'plotly',
         'pyedflib',
         'scikit-image',
