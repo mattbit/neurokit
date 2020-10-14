@@ -1,5 +1,6 @@
 import re
 import mne
+import math
 import shutil
 import chardet
 import logging
@@ -21,7 +22,7 @@ def read_edf(path):
     return _recording_from_mne_raw(raw)
 
 
-def write_edf(recording, path, artifacts=False):
+def write_edf(recording, path):
     writer = EdfWriter(str(path), len(recording.data.channels))
     try:
         duration, samples_per_record = _calc_datarecord_params(
@@ -56,7 +57,11 @@ def write_edf(recording, path, artifacts=False):
 
         writer.setDatarecordDuration(duration * 100000)
 
-        writer.set_number_of_annotation_signals(1 + artifacts)
+        n_annotation = 1
+        if recording.es.has('annotations'):
+            duration = recording.duration.total_seconds()
+            n_annotation = math.ceil(20 * len(recording.es.annotations) / duration)
+        writer.set_number_of_annotation_signals(min(n_annotation, 64))
 
         data = recording.data.to_numpy()
         if data.shape[0] % samples_per_record != 0:
@@ -71,8 +76,9 @@ def write_edf(recording, path, artifacts=False):
 
         # Write annotations
         if recording.es.has('annotations'):
+            start_interval = recording.data.index.min()
             for item in recording.es['annotations']:
-                onset = (item.start - start_date).total_seconds()
+                onset = (item.start - start_interval).total_seconds()
                 duration = (item.end - item.start).total_seconds()
                 writer.writeAnnotation(onset, duration, item.description)
 
