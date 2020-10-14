@@ -1,8 +1,40 @@
+"""
+This module implements the declipping method described in [1]_, using
+consistent dictionary learning to in-paint clipped parts of the signal based on
+sparse reconstruction and clipping constraints at the same time.
+
+References
+----------
+.. [1] Rencker, Lucas et al. "Consistent dictionary learning for signal
+       declipping." Latent Variable Analysis and Signal Separation (2018).
+"""
 import numpy as np
+from tqdm import trange
 import scipy.signal as ss
 
 
 def create_frames(signal, frame_size=256, step_size=None, window=None):
+    """Create frames from a signal.
+
+    Parameters
+    ----------
+    signal : numpy.ndarray
+        The signal used to create the frames.
+    frame_size : int
+        The size of the frames (number of samples, default is 256).
+    step_size : int
+        Defines the distance between successive frames. If not specified,
+        a value of 1/4 of the frame size is used.
+    window : str
+        The window function used. Accepted values are those defined in the
+        `scipy.signal.get_window` funtion. If not specified, no window function
+        is used (equivalent to a `boxcar` rectangular window).
+
+    Returns
+    -------
+    frames : numpy.ndarray (num frames, frame size)
+        The resulting frames.
+    """
     if step_size is None:
         step_size = frame_size // 4
 
@@ -17,14 +49,32 @@ def create_frames(signal, frame_size=256, step_size=None, window=None):
     return frames
 
 
-def create_signal(frames, step_size, window='boxcar'):
+def create_signal(frames, step_size, window=None):
+    """Reconstruct a signal given a sequence of frames.
+
+    Parameters
+    ----------
+    frames : numpy.ndarray (num frames, frame size)
+        The frames from which the signal should be constructed.
+    step_size : int
+        Defines the distance between successive frames.
+    window : str
+        The window function used. Accepted values are those defined in the
+        `scipy.signal.get_window` funtion. If not specified, no window function
+        is used (equivalent to a `boxcar` rectangular window).
+
+    Returns
+    -------
+    signal : numpy.ndarray
+        The reconstructed signal.
+    """
     num_frames, frame_size = frames.shape
     signal_size = step_size * (num_frames - 1) + frame_size
 
     signal = np.zeros(signal_size)
     overlap = np.zeros(signal_size)
 
-    window_values = ss.get_window(window, frame_size)
+    window_values = ss.get_window(window, frame_size) if window else 1
 
     offsets = step_size * np.arange(num_frames)
     for n, offset in enumerate(offsets):
@@ -34,10 +84,24 @@ def create_signal(frames, step_size, window='boxcar'):
     return signal / overlap
 
 
-def dct_dictionary(frame_size, num_atoms):
-    window = ss.hann(frame_size)
+def dct_dictionary(atom_size, num_atoms):
+    """Create a Discrete Cosine Transform dictionary.
 
-    t = np.arange(frame_size)  # time
+    Parameters
+    ----------
+    frame_size : int
+        The size of the dictionary atom.
+    num_atoms : int
+        The number of atoms in the dictionary.
+
+    Returns
+    -------
+    D : numpy.ndarray
+        The DCT dictionary.
+    """
+    window = ss.hann(atom_size)
+
+    t = np.arange(atom_size)  # time
     k = np.arange(num_atoms)  # frequency
 
     D = np.cos(np.pi / num_atoms
@@ -50,12 +114,30 @@ def dct_dictionary(frame_size, num_atoms):
 
 
 def hard_threshold(A, k):
+    """Performs hard thresholding on a sequence of vectors.
+
+    Hard thresholding of keeps the `k` largest components (in absolute value)
+    of a vector and remove the others.
+
+    Parameters
+    ----------
+    A : numpy.ndarray (num vectors, vector size)
+        The sequence of vectors.
+    k : int
+        Number of components to keep for each vector.
+
+    Returns
+    -------
+    thresholded : numpy.ndarray
+        Hard thresholded vectors.
+    """
     A_abs = np.abs(A)
     return A * (A_abs >= -np.partition(-A_abs, k - 1, axis=0)[k - 1])
 
 
 def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
                                    num_iterations=100):
+    """Consistent dictionary learning."""
     if D is None:
         D = dct_dictionary(frames.shape[1], 2 * frames.shape[1])
     if A is None:
@@ -65,7 +147,7 @@ def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
     M_pos = M.T > 0
     M_neg = M.T < 0
 
-    for iteration in range(num_iterations):
+    for iteration in trange(num_iterations):
         # Sparse coding
         μ1 = 1 / np.linalg.norm(D, 2)**2
 
@@ -96,6 +178,7 @@ def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
 
 
 def declip_signal(signal, low, high, frame_size=256, step_size=64):
+    """Declip a signal with consistent dictionary learning."""
     signal_len = len(signal)
 
     if signal_len % frame_size != 0:
@@ -113,7 +196,7 @@ def declip_signal(signal, low, high, frame_size=256, step_size=64):
     reconstructed = create_signal(reconstructed_frames, step_size,
                                   window='hamming')
 
-    declipped = signal.copy()
-    declipped[clipping_mask != 0] == reconstructed[clipping_mask != 0]
+    # Keep the original signal when not clipped.
+    reconstructed[clipping_mask == 0] = signal[clipping_mask == 0]
 
-    return reconstructed[:signal_len]
+    return reconstructed
