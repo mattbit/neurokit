@@ -198,4 +198,4 @@ def declip_signal(signal, low, high, frame_size=256, step_size=64):
     # Keep the original signal when not clipped.
     reconstructed[clipping_mask == 0] = signal[clipping_mask == 0]
 
-    return reconstructed
+    return reconstructed[:signal_len]
