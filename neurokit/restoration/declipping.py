@@ -9,7 +9,6 @@ References
        declipping." Latent Variable Analysis and Signal Separation (2018).
 """
 import numpy as np
-from tqdm import trange
 import scipy.signal as ss
 
 
@@ -147,7 +146,7 @@ def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
     M_pos = M.T > 0
     M_neg = M.T < 0
 
-    for iteration in trange(num_iterations):
+    for iteration in range(num_iterations):
         # Sparse coding
         μ1 = 1 / np.linalg.norm(D, 2)**2
 
