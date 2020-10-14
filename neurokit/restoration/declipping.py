@@ -143,7 +143,7 @@ def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
     if A is None:
         A = np.zeros((D.shape[1], frames.shape[0]))
 
-    Y = frames.T
+    Y = frames.T.copy()
     M_pos = M.T > 0
     M_neg = M.T < 0
 
