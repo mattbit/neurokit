@@ -8,8 +8,10 @@ References
 .. [1] Rencker, Lucas et al. "Consistent dictionary learning for signal
        declipping." Latent Variable Analysis and Signal Separation (2018).
 """
+import warnings
 import numpy as np
 import scipy.signal as ss
+from scipy.linalg import blas
 
 
 def create_frames(signal, frame_size=256, step_size=None, window=None):
@@ -136,26 +138,65 @@ def hard_threshold(A, k):
 
 def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
                                    num_iterations=100):
-    """Consistent dictionary learning."""
+    """Consistent dictionary learning.
+
+    Performs a consistent dictionary learning on a set of frames, using the
+    algorithm presented in [1]_.
+
+    Parameters
+    ----------
+    frames : numpy.ndarray
+        The array of frames.
+    M : numpy.ndarray
+        Sensing matrix with the same shape of `frames` and value 1 if a sample
+        is clipped from above, -1 if clipped from below, 0 if not clipped.
+    k : int
+        Number of components to preserve in hard thresholding.
+    n1 : int
+        Number of gradient descent iterations of sparse coding (IHT).
+    n2 : int
+        Number of gradient descent iterations for dictionary learning.
+    D : numpy.ndarray, optional
+        The initial dictionary. If not specified, a discrete cosine transform
+        dictionary will be used.
+    A : numpy.ndarray, optional
+        Initial representation of frames in the dictionary for the sparse
+        coding problem. If not specified, a zero matrix will be used.
+    num_iterations : int
+        Number of iterations of the full algorithm (sparse coding + dictionary
+        learning).
+
+    Returns
+    -------
+    (D, A) : (numpy.ndarray, numpy.ndarray)
+        Dictionary and decomposition of the frames on the dictionary.
+    """
     if D is None:
         D = dct_dictionary(frames.shape[1], 2 * frames.shape[1])
     if A is None:
         A = np.zeros((D.shape[1], frames.shape[0]))
 
-    Y = frames.T.copy()
-    M_pos = M.T > 0
-    M_neg = M.T < 0
+    Y = frames.T
 
-    for iteration in range(num_iterations):
+    m_c = (M.T).copy()
+    M_pos = m_c > 0
+    M_neg = m_c < 0
+
+    A = np.asfortranarray(A)
+    D = np.asfortranarray(D)
+
+    for _ in range(num_iterations):
         # Sparse coding
         μ1 = 1 / np.linalg.norm(D, 2)**2
 
-        for i in range(n1):
-            R = Y - D @ A
+        for _ in range(n1):
+            R = blas.dgemm(-1, D, A, 1, Y)
+            # R = Y - D @ A
             R[M_pos] = np.maximum(R[M_pos], 0)
             R[M_neg] = np.minimum(R[M_neg], 0)
 
-            A = A + μ1 * D.T @ R  # gradient descent
+            A = blas.dgemm(μ1, D, R, 1, A, trans_a=True)
+            # A = A + μ1 * D.T @ R  # gradient descent
             A = hard_threshold(A, k)
 
         # Dictionary learning
@@ -165,12 +206,15 @@ def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
 
         μ2 = 1 / np.linalg.norm(A, 2)**2
 
-        for j in range(n2):
-            R = Y - D @ A
+        for _ in range(n2):
+            R = blas.dgemm(-1, D, A, 1, Y)
+            # R = Y - D @ A
             R[M_pos] = np.maximum(R[M_pos], 0)
             R[M_neg] = np.minimum(R[M_neg], 0)
 
-            D = D + μ2 * R @ A.T  # gradient descent
+            D = blas.dgemm(μ2, R, A, 1, D, trans_b=True)  # gradient descent
+            # D = D + μ2 * R @ A.T    # (same as above, without blas)
+
             D = D / np.sqrt(np.sum(D**2, 0))  # normalize
 
     return D, A
@@ -178,6 +222,12 @@ def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
 
 def declip_signal(signal, low, high, frame_size=256, step_size=64):
     """Declip a signal with consistent dictionary learning."""
+    if low is None and high is None:
+        raise ValueError('Low and high clipping values cannot both be None.')
+
+    if low is not None and high is not None and low >= high:
+        raise ValueError('Invalid clipping values.')
+
     signal_len = len(signal)
 
     if signal_len % frame_size != 0:
@@ -185,7 +235,12 @@ def declip_signal(signal, low, high, frame_size=256, step_size=64):
 
     frames = create_frames(signal, frame_size, step_size, window='hamming')
 
-    clipping_mask = 1 * (signal >= high) - 1 * (signal <= low)
+    clipping_mask = np.zeros_like(signal, dtype=int)
+    if high is not None:
+        clipping_mask += signal >= high
+    if low is not None:
+        clipping_mask -= signal <= low
+
     M = create_frames(clipping_mask, frame_size, step_size)
 
     D, A = consistent_dictionary_learning(frames, M, 32, 20, 20,
