@@ -8,7 +8,6 @@ References
 .. [1] Rencker, Lucas et al. "Consistent dictionary learning for signal
        declipping." Latent Variable Analysis and Signal Separation (2018).
 """
-import warnings
 import numpy as np
 import scipy.signal as ss
 from scipy.linalg import blas
