@@ -27,6 +27,6 @@ setuptools.setup(
         'unidecode',
         'mne>=0.20.0,<0.21',
         'msgpack',
-        'h5py',
+        'h5py>=2.10',
     ]
 )
