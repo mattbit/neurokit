@@ -189,42 +189,61 @@ def make_fixed_length_epochs(raw):
 
 def remove_ecg(raw, tmin=-0.1, tmax=0.2):
     sf = raw.info['sfreq']
-    ecg_events, ch, heartbeat = mne.preprocessing.find_ecg_events(
-        raw, reject_by_annotation=True)
+    ecg_events, ch, heartbeat = mne.preprocessing.find_ecg_events(raw,ch_name='ECG1+', reject_by_annotation=True)
     ecg_epochs = mne.Epochs(raw, ecg_events, 999, tmin, tmax, picks='ECG1+', baseline=(None,None),
                             reject_by_annotation=True, verbose=False)
     ## moving the center of event to the minimum of the amplitude
     ecg_epochs.event[:,0] += int(round(tmin * sf)) + np.argmin(np.squeeze(ecg_epochs.get_data()), axis=1)
 
-    eeg_chs = mne.pick_types(raw.info, meg=False, eeg=True, stim=False, eog=False, exlude='bads')
-
+    eeg_chs = mne.pick_types(raw.info, meg=False, eeg=True, stim=False, eog=False, exclude='bads')
+    data = raw.get_data()
+    data_updated = np.copy(data)
     dt = (60*60) * sf / heartbeat
-    time_segmentation = np.arange(raw.first_samp, raw.last_samp + dt, dt )
-    for start , stop in zip(time_segmentation, time_segmentation[1:]):
-        mask = np.ma.masked_outside(ecg_epochs.events[:,0], start. stop).mask
-        try:
-            epochs_ecg_centered = mne.Epochs(raw, ecg_epochs.events[~mask,:], 999, tmin, tmax, picks=eeg_chs,
-                                baseline=(None, None), detrend=1, verbose=False, event_repeated='drop',
-                                preload=True)
-        except ValueError:
-            continue
-        if len(epochs_ecg_centered) < 2:
-            continue
+    dt_eps = int(round(tmax * sf) + 1)
+    time_segmentation = np.arange(raw.first_samp + dt_eps, raw.last_samp + dt - dt_eps, dt )
+    for ch in eeg_chs:
 
-        event_eeg = ecg_epochs.events[~mask,:][epochs_ecg_centered.selection,:]
+        for start , stop in zip(time_segmentation, time_segmentation[1:]):
+            mask = np.ma.masked_outside(ecg_epochs.events[:,0], start, stop).mask
+            try:
+                epochs_ecg_centered = mne.Epochs(raw, ecg_epochs.events[~mask,:], 999, tmin, tmax, picks=ch,
+                                    baseline=(None, None), detrend=1, verbose=False, event_repeated='drop',
+                                    preload=True)
+            except ValueError:
+                continue
+            if len(epochs_ecg_centered) < 2:
+                continue
 
-        eeg_centering = np.argmax(np.abs(np.diff(
-            epochs_ecg_centered.get_data()[:,:,(int(round((-tmin) * sf)) - 3):(int(round((-tmin) * sf)) + 4)],
-            axis=2)), axis=2) - 1
+            event_eeg = ecg_epochs.events[~mask,:][epochs_ecg_centered.selection,:]
 
-        event_eeg += eeg_centering - 3
+            eeg_centering = np.argmax(np.abs(np.diff(np.squeeze(
+                epochs_ecg_centered.get_data())[:,:,(int(round((-tmin) * sf)) - 3):(int(round((-tmin) * sf)) + 4)],
+                axis=1)), axis=1) - 1
 
-        epochs_eeg_centered = mne.Epochs(raw, event_eeg, 999, tmin, tmax, picks=eeg_chs,
-                                baseline=(None, None), detrend=1, verbose=False, event_repeated='drop',
-                                preload=True)
-        event_eeg = event_eeg[epochs_eeg_centered.selection, :]
+            event_eeg[:,0] += eeg_centering - 3
 
-        mean_qrs = np.mean(epochs_eeg_centered.get_data(),axis=2)
+            epochs_eeg_centered = mne.Epochs(raw, event_eeg, 999, tmin, tmax, picks=ch,
+                                    baseline=(None, None), detrend=1, verbose=False, event_repeated='drop',
+                                    preload=True)
+            event_eeg = event_eeg[epochs_eeg_centered.selection, :]
+            mean_qrs = np.mean(epochs_eeg_centered.get_data().T,axis=2)
+
+            for i, event in enumerate(event_eeg[:-1,0]):
+                lower_bound = event + int(round(tmin * sf))
+                upper_bound = event + int(round(tmax * sf) + 1)
+                signal = data_updated[ch,lower_bound - raw.first_samp:upper_bound - raw.first_samp]
+                signal_baseline_corr = np.squeeze(data)[i, :]
+                data_updated[ch,lower_bound - raw.first_samp:upper_bound - raw.first_samp] = \
+                    signal - ((np.dot(signal_baseline_corr, mean_qrs) / np.dot(mean_qrs, mean_qrs)) * mean_qrs)
+
+    return mne.io.RawArray(data_updated, raw.info, first_samp=raw.first_samp)
+
+
+
+
+
+        
+
 
 
 
