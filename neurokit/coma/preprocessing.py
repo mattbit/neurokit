@@ -204,22 +204,21 @@ def remove_ecg(raw, tmin=-0.1, tmax=0.2):
         data_qrs[offset] = data[offset - 30:offset + 30].mean(axis=0)
 
     window = hann(data.shape[-1])
-    data_qrs *= np.dot(data_qrs,data.T) / np.dot(data_qrs, data_qrs.T) * window.reshape(1, 1, -1)
-
+    projection = np.expand_dims(np.sum(data_qrs * data, axis=2), axis=2)
+    normalization = np.expand_dims(np.sum(data_qrs ** 2, axis=2), axis=2)
+    data_qrs *= projection / normalization * window.reshape(1,1,-1)
+    data_qrs = np.nan_to_num(data_qrs)
     data_update = np.copy(raw.get_data())
     lower_time = int(round(tmin * sf))
     upper_time = int(round(tmax * sf) + 1)
-    for idx,t in enumerate(events[:,0]):
-        if (t < lower_time) or ( raw.times[-1] - t < lower_time):
+    for idx, t in enumerate(events[:, 0]):
+        if (t < lower_time) or (raw.times.size - t < lower_time):
             continue
-        if idx < 31:
-            data_update[:, t - lower_time:t + upper_time] -= data_qrs[:, 30, :]
+        if idx < 30:
+            data_update[:, t + lower_time:t + upper_time] -= data_qrs[30]
         if idx >= data_qrs.shape[0] - 30:
-            data_update[:, t + lower_time:t + upper_time] -= data_qrs[:, data_qrs.shape[0] - 30, :]
-        data_update[:,t - lower_time:t+upper_time] -= data_qrs[idx]
+            data_update[:, t + lower_time:t + upper_time] -= data_qrs[data_qrs.shape[0] - 30]
+        else:
+            data_update[:, t + lower_time:t + upper_time] -= data_qrs[idx]
 
     return mne.io.RawArray(data_update, raw.info, first_samp=raw.first_samp)
-
-
-
-
