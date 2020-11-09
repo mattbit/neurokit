@@ -37,6 +37,7 @@ def preprocess(raw: mne.io.Raw):
     raw.info['bads'].extend(bad_channels)
 
     raw = fix_artifacts(raw)
+    raw = remove_ecg(raw)
     return raw
 
 
