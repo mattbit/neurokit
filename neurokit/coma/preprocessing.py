@@ -195,31 +195,26 @@ def remove_ecg(raw, tmin=-0.1, tmax=0.2):
     events, _, _ = mne.preprocessing.find_ecg_events(raw, ch_name='ECG1+', reject_by_annotation=True)
     if len(events) < 1:
         return raw
-
-    epochs = mne.Epochs(raw, events, tmin=tmin, tmax=tmax, picks=['eeg'],
-                        baseline=(None, None), detrend=0, event_repeated='error',
+    eeg_ch = mne.pick_types(raw.info, meg=False, eeg=True, stim=False, eog=False, exclude='bads')
+    epochs = mne.Epochs(raw, events, tmin=tmin, tmax=tmax, picks=eeg_ch,
+                        baseline=(None, None), detrend=1, event_repeated='error',
                         preload=True)
     data = epochs.get_data()
     data_qrs = np.zeros_like(data)
     for offset in range(30, data.shape[0] - 30):
         data_qrs[offset] = data[offset - 30:offset + 30].mean(axis=0)
+    data_qrs[:30], data_qrs[-30:] = data_qrs[30], data_qrs[-31]
 
     window = hann(data.shape[-1])
     projection = np.expand_dims(np.sum(data_qrs * data, axis=2), axis=2)
     normalization = np.expand_dims(np.sum(data_qrs ** 2, axis=2), axis=2)
-    data_qrs *= projection / normalization * window.reshape(1,1,-1)
-    data_qrs = np.nan_to_num(data_qrs)
+    data_qrs *= projection / normalization * window.reshape(1, 1, -1)
     data_update = np.copy(raw.get_data())
     lower_time = int(round(tmin * sf))
     upper_time = int(round(tmax * sf) + 1)
     for idx, t in enumerate(events[:, 0]):
         if (t < lower_time) or (raw.times.size - t < lower_time):
             continue
-        if idx < 30:
-            data_update[:, t + lower_time:t + upper_time] -= data_qrs[30]
-        if idx >= data_qrs.shape[0] - 30:
-            data_update[:, t + lower_time:t + upper_time] -= data_qrs[data_qrs.shape[0] - 30]
-        else:
-            data_update[:, t + lower_time:t + upper_time] -= data_qrs[idx]
+        data_update[eeg_ch, t + lower_time:t + upper_time] -= data_qrs[idx]
 
     return mne.io.RawArray(data_update, raw.info, first_samp=raw.first_samp)
