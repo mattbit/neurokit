@@ -5,10 +5,13 @@ import numpy as np
 import pandas as pd
 
 from ..core import Recording
+from ..internals import import_optional_dependency
 
 
 def read_msgpack(filename):
     """Read a msgpack encoded Recording."""
+    msgpack = import_optional_dependency('msgpack')
+
     if isinstance(filename, io.IOBase):
         rec_data = msgpack.unpack(filename, object_pairs_hook=_msgpack_decoder)
     else:
@@ -20,6 +23,8 @@ def read_msgpack(filename):
 
 def write_msgpack(recording: Recording, filename):
     """Write a Recording object in the msgpack format."""
+    msgpack = import_optional_dependency('msgpack')
+
     if isinstance(filename, io.IOBase):
         msgpack.pack(recording.to_dict(),
                      filename,

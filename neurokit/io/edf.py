@@ -2,7 +2,6 @@ import re
 import mne
 import math
 import shutil
-import chardet
 import logging
 import datetime
 import unidecode
@@ -12,6 +11,7 @@ from pathlib import Path
 from fractions import Fraction
 from pyedflib import EdfWriter
 from ._mne import _recording_from_mne_raw
+from ..internals import import_optional_dependency
 
 
 def read_edf(path):
@@ -60,7 +60,8 @@ def write_edf(recording, path):
         n_annotation = 1
         if recording.es.has('annotations'):
             duration = recording.duration.total_seconds()
-            n_annotation = math.ceil(20 * len(recording.es.annotations) / duration)
+            n_annotation = math.ceil(
+                20 * len(recording.es.annotations) / duration)
         writer.set_number_of_annotation_signals(min(n_annotation, 64))
 
         data = recording.data.to_numpy()
@@ -186,6 +187,8 @@ class RecordingInfo:
 
 
 def fix_edf(file, dest, anonymize=False):
+    chardet = import_optional_dependency('chardet')
+
     file = Path(file)
     dest = Path(dest)
     with file.open('rb') as input_file:
