@@ -189,13 +189,12 @@ def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
         μ1 = 1 / np.linalg.norm(D, 2)**2
 
         for _ in range(n1):
-            R = blas.dgemm(-1, D, A, 1, Y)
-            # R = Y - D @ A
+            R = blas.dgemm(-1, D, A, 1, Y)  # R = Y - D @ A
             R[M_pos] = np.maximum(R[M_pos], 0)
             R[M_neg] = np.minimum(R[M_neg], 0)
 
-            A = blas.dgemm(μ1, D, R, 1, A, trans_a=True)
-            # A = A + μ1 * D.T @ R  # gradient descent
+            A = blas.dgemm(μ1, D, R, 1, A, trans_a=True)  # gradient descent
+            # A = A + μ1 * D.T @ R
             A = hard_threshold(A, k)
 
         # Dictionary learning
@@ -206,13 +205,12 @@ def consistent_dictionary_learning(frames, M, k, n1, n2, D=None, A=None,
         μ2 = 1 / np.linalg.norm(A, 2)**2
 
         for _ in range(n2):
-            R = blas.dgemm(-1, D, A, 1, Y)
-            # R = Y - D @ A
+            R = blas.dgemm(-1, D, A, 1, Y)  # R = Y - D @ A
             R[M_pos] = np.maximum(R[M_pos], 0)
             R[M_neg] = np.minimum(R[M_neg], 0)
 
             D = blas.dgemm(μ2, R, A, 1, D, trans_b=True)  # gradient descent
-            # D = D + μ2 * R @ A.T    # (same as above, without blas)
+            # D = D + μ2 * R @ A.T
 
             D = D / np.sqrt(np.sum(D**2, 0))  # normalize
 
