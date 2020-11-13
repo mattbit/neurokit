@@ -1,8 +1,17 @@
 import warnings
 import numpy as np
-from numba import jit
 from scipy.optimize import least_squares
 from scipy.ndimage import gaussian_filter1d
+
+try:
+    from numba import jit
+except ImportError:
+    warnings.warn(
+        'We recommend installing `numba` to speed up Gaussian decomposition.'
+    )
+
+    def jit(fun, *args, **kwargs):
+        return fun
 
 
 @jit
