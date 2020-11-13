@@ -1,5 +1,3 @@
-import numpy as np
-
 from .edf import read_edf
 from .hdf import read_hdf
 from .fif import read_fif
