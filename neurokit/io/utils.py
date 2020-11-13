@@ -165,7 +165,20 @@ def trim_empty(recording):
     return recording.slice(start, end)
 
 
-def split_in_segments(recording, min_break=300, trim=True):
+def split_in_segments(recording, min_break=300, trim=True, reset=True):
+    """Splits a recording in segments when signal is zero.
+
+    Parameters
+    ----------
+    recording : neurokit.Recording
+        The recording object.
+    min_break : float
+        Minimum length of empty signal (in seconds) to split the recording.
+    trim : bool
+        Whether the segments should be trimmed (i.e. zero signal removed).
+    reset : bool
+        Whether the segment offset should be reset.
+    """
     # Detect breaks (all zero, electrodes unbranched)
     no_signal = detect_empty_signal(recording)
 
@@ -176,7 +189,10 @@ def split_in_segments(recording, min_break=300, trim=True):
 
     segments = split_recording(recording, breakpoints)
     if trim:
-        return [trim_empty(s) for s in segments]
+        segments = [trim_empty(s) for s in segments]
+        segments = [s for s in segments if len(s.data) > 0]
+    if reset:
+        segments = [reset_offset(s) for s in segments]
 
     return segments
 

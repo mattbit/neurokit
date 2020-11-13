@@ -3,15 +3,17 @@ import json
 import shutil
 import tarfile
 import tempfile
-import fastparquet
 import pandas as pd
 
 from ..core.series import EventSeries
 from ..core.recording import Recording
+from ..internals import import_optional_dependency
 
 
 def read_nkr(filename):
     """Read a Recording from a parquet file."""
+    fastparquet = import_optional_dependency('fastparquet')
+
     tf = tarfile.open(filename, mode='r')
     tmp = tempfile.mkdtemp(prefix='nk_tmp')
 

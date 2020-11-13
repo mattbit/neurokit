@@ -23,10 +23,8 @@ setuptools.setup(
         'pywavelets',
         'networkx',
         'dateparser',
-        'chardet',
         'unidecode',
         'mne>=0.20.0,<0.21',
-        'msgpack',
         'h5py>=2.10',
     ]
 )
