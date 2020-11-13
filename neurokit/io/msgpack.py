@@ -40,6 +40,8 @@ def write_msgpack(recording: Recording, filename):
 
 
 def _msgpack_encoder(obj):
+    msgpack = import_optional_dependency('msgpack')
+
     if isinstance(obj, datetime.datetime):
         obj = pd.to_datetime(obj)
         seconds = obj.value // 1000000000
@@ -56,6 +58,8 @@ def _msgpack_encoder(obj):
 
 
 def _maybe_cast(obj):
+    msgpack = import_optional_dependency('msgpack')
+
     if isinstance(obj, msgpack.ext.Timestamp):
         return pd.to_datetime(obj.seconds * 1000000000 + obj.nanoseconds,
                               unit='ns')
