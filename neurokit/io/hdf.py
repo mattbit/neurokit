@@ -12,7 +12,7 @@ _hdf_string = h5py.string_dtype(encoding='utf-8')
 
 def _parse_ts_group(group, name):
     data = group.get('data')[()]
-    chs = group.get('channel')[()]
+    chs = group.get('channel').asstr()[()]
     time = pd.to_timedelta(group.get('time')[()], unit='s')
     frequency = group.attrs.get('frequency')
 
@@ -24,7 +24,8 @@ def _parse_ts_group(group, name):
 
 
 def _parse_es_group(group, name):
-    data = group.get('data')[()]
+    data = [(s, e, ch.decode('utf8'), code.decode('utf8'), desc.decode('utf8'))
+            for (s, e, ch, code, desc) in group.get('data')[()]]
     return EventSeries(data, name=name)
 
 
@@ -68,12 +69,14 @@ def write_hdf(recording: Recording, filename):
         f.attrs['_nkversion'] = 0
         f.attrs['name'] = str(recording.name)
         meta_group = f.create_group('meta')
-        meta_group.attrs.update((name, _encode_attr_val(val)) for (name, val) in recording.meta.items() if val is not None)
+        meta_group.attrs.update((name, _encode_attr_val(val)) for (
+            name, val) in recording.meta.items() if val is not None)
 
         # Patient data
         patient_meta = recording.patient.to_dict()
         patient_group = f.create_group('patient')
-        patient_group.attrs.update((name, _encode_attr_val(val)) for (name, val) in patient_meta.items() if val is not None)
+        patient_group.attrs.update((name, _encode_attr_val(val)) for (
+            name, val) in patient_meta.items() if val is not None)
 
         # Timeseries
         ts_group = f.create_group('timeseries', track_order=True)
