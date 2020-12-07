@@ -12,7 +12,7 @@ setuptools.setup(
         'Programming Language :: Python :: 3',
         'Operating System :: OS Independent',
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     install_requires=[
         'numpy',
         'pandas>=1.1.0,<1.2',
@@ -25,6 +25,6 @@ setuptools.setup(
         'dateparser',
         'unidecode',
         'mne>=0.20.0,<0.21',
-        'h5py>=2.10',
+        'h5py==3.1.0',
     ]
 )
