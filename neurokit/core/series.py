@@ -204,7 +204,7 @@ class TimeSeries(BaseTimeSeries):
     def from_dict(cls, data, **kwargs):  # skipcq: PYL-W0221
         chs = data.get('channels', [])
         ch_names = [ch.get('name') for ch in chs]
-        ch_data = np.array([ch.get('data') for ch in chs], dtype=np.float).T
+        ch_data = np.array([ch.get('data') for ch in chs], dtype=np.float64).T
         offset = pd.to_timedelta(data.get('offset', 0), unit='ns')
 
         return cls(
@@ -258,7 +258,7 @@ class UnevenTimeSeries(BaseTimeSeries):
     def from_dict(cls, data, **kwargs):  # skipcq: PYL-W0221
         chs = data.get('channels', [])
         ch_names = [ch.get('name') for ch in chs]
-        ch_data = np.array([ch.get('data') for ch in chs], dtype=np.float).T
+        ch_data = np.array([ch.get('data') for ch in chs], dtype=np.float64).T
 
         return cls(
             ch_data,

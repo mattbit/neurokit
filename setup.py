@@ -24,7 +24,7 @@ setuptools.setup(
         'networkx',
         'dateparser',
         'unidecode',
-        'mne>=0.20.0,<0.21',
+        'mne>=0.22.0,<0.23',
         'h5py==3.1.0',
     ]
 )

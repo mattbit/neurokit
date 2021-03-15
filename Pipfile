@@ -4,7 +4,6 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-python-language-server = {extras = ["all"],version = "*"}
 pytest = "*"
 pytest-repeat = "*"
 pytest-cov = "*"
@@ -24,6 +23,6 @@ networkx = "*"
 fastparquet = "*"
 plotly = "*"
 msgpack = "*"
-numba = "==0.48.0"
+numba = ">=0.48"
 pandas = "==1.1.*"
 h5py = "==3.1.0"
