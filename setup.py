@@ -15,7 +15,7 @@ setuptools.setup(
     python_requires='>=3.7',
     install_requires=[
         'numpy',
-        'pandas>=1.1.0,<1.2',
+        'pandas==1.2.*',
         'scipy',
         'plotly',
         'pyedflib',
@@ -24,7 +24,7 @@ setuptools.setup(
         'networkx',
         'dateparser',
         'unidecode',
-        'mne>=0.22.0,<0.23',
-        'h5py==3.1.0',
+        'mne==0.22.*',
+        'h5py==3.2.*',
     ]
 )
