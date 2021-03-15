@@ -132,7 +132,7 @@ class GaussianDecomposition:
         bounds_l[:, 2] = self.min_sigma
         bounds = (bounds_l.ravel(), bounds_h.ravel())
 
-        base_x = np.arange(y.size, dtype=np.float)
+        base_x = np.arange(y.size, dtype=float)
 
         r = least_squares(_ffit, params_guess.ravel(), args=(
             base_x, y), bounds=bounds, max_nfev=self.max_ls_iter)
