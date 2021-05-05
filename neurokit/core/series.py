@@ -138,14 +138,20 @@ class TimeSeries(BaseTimeSeries):
         super().__init__(*args, **kwargs)
 
         if frequency:
+            # Build the FixedTimedeltaIndex based on frequency
             period_ns = f'{round(1e9 / frequency)}N'
             self.index = timedelta_range(
                 start=0, freq=period_ns, periods=self.shape[0])
-        elif not isinstance(self.index, pd.TimedeltaIndex):
-            raise ValueError('A TimedeltaIndex must be defined '
-                             + 'or a frequency must be specified')
-        elif not isinstance(self.index, FixedTimedeltaIndex):
+        elif isinstance(self.index, pd.TimedeltaIndex):
+            # Convert the TimedeltaIndex to FixedTimedeltaIndex
             self.index = FixedTimedeltaIndex(self.index)
+        elif isinstance(self.index, FixedTimedeltaIndex):
+            # All good.
+            pass
+        else:
+            # Fail silently and return normal pandas object, so that reduction
+            # operations will not fail (e.g. taking mean of the rows).
+            return None
 
         if not isinstance(offset, pd.Timedelta):
             offset = pd.Timedelta(offset, unit='s')
