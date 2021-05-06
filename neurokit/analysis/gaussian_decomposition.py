@@ -58,6 +58,9 @@ class GaussianDecomposition:
         if not explicitly set.
     min_distance : int
         Minimum distance between components location.
+    min_amplitude : float
+        Minimum amplitude of a peak. If `normalize` is set to true, this
+        will indicate a relative amplitude with respect to the maximum.
     max_ls_iter : int
         Maximum number of least-squares iterations. If a fit is not found
         before this limit is reached, the guessed parameters are used.
@@ -85,10 +88,11 @@ class GaussianDecomposition:
     """
 
     def __init__(self, alpha=3, min_sigma=None, min_distance=10,
-                 max_ls_iter=20, normalize=True):
+                 min_amplitude=0, max_ls_iter=20, normalize=True):
         self.alpha = alpha
         self.min_sigma = alpha / 2 if min_sigma is None else min_sigma
         self.min_distance = min_distance
+        self.min_amplitude = min_amplitude
         self.components_ = None
         self.n_components_ = None
         self.max_ls_iter = max_ls_iter
@@ -160,9 +164,13 @@ class GaussianDecomposition:
         u4 = gaussian_filter1d(x_clip, self.alpha, order=4, mode="wrap")
 
         idx, = np.nonzero(np.diff(np.sign(u3)))
-        idx = list(idx[(x[idx] > 0) & (u2[idx] < 0) & (u4[idx] > 0)])
+        idx = idx[(x[idx] > 0) & (u2[idx] < 0) & (u4[idx] > 0)]
+
+        # Remove small amplitude components
+        idx = idx[x[idx] >= self.min_amplitude]
 
         # Select location by distance
+        idx = list(idx)
         distances = np.diff(idx)
         while (distances < self.min_distance).any():
             d_min = np.argmin(distances)

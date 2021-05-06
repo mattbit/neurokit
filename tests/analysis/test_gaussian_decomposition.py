@@ -74,6 +74,21 @@ def test_fit_with_distance():
     assert σ0 == approx(3., abs=1e-3)
 
 
+def test_fit_with_min_amplitude():
+    xs = np.arange(100)
+    ys = sum_of_gaussians(xs, [(1, 30, 5), (1, 40, 5), (20, 70, 3)])
+
+    dec = GaussianDecomposition(alpha=1, min_amplitude=10, normalize=False)
+    dec.fit(ys)
+
+    assert dec.n_components_ == 1
+
+    dec = GaussianDecomposition(alpha=1, min_amplitude=0.5)
+    dec.fit(ys)
+
+    assert dec.n_components_ == 1
+
+
 def test_fit_with_noise():
     xs = np.arange(100)
     ys = sum_of_gaussians(xs, [(10, 30, 5), (20, 70, 3)])
