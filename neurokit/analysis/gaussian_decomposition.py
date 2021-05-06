@@ -158,10 +158,10 @@ class GaussianDecomposition:
 
     def _guess_initial(self, x):
         x_clip = x.clip(0)
-        u0 = gaussian_filter1d(x_clip, self.alpha, order=0, mode="wrap")
-        u2 = gaussian_filter1d(x_clip, self.alpha, order=2, mode="wrap")
-        u3 = gaussian_filter1d(x_clip, self.alpha, order=3, mode="wrap")
-        u4 = gaussian_filter1d(x_clip, self.alpha, order=4, mode="wrap")
+        u0 = gaussian_filter1d(x_clip, self.alpha, order=0, mode="nearest")
+        u2 = gaussian_filter1d(x_clip, self.alpha, order=2, mode="nearest")
+        u3 = gaussian_filter1d(x_clip, self.alpha, order=3, mode="nearest")
+        u4 = gaussian_filter1d(x_clip, self.alpha, order=4, mode="nearest")
 
         idx, = np.nonzero(np.diff(np.sign(u3)))
         idx = idx[(x[idx] > 0) & (u2[idx] < 0) & (u4[idx] > 0)]
