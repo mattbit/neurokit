@@ -66,7 +66,7 @@ def _detect_suppressions(recording: Recording,
         threshold = _find_threshold(rec.data.loc[:, channels])
     envelope = np.nanmax(rec.data.loc[:, channels].abs().values, axis=1)
     with np.errstate(invalid='ignore'):
-        ies_mask = envelope < threshold
+        ies_mask = envelope <= threshold
     min_length = math.floor(min_duration * rec.frequency)
     dilate_len = math.floor((min_duration + min_gap) * rec.frequency)
     gap_len = math.floor(min_gap * rec.frequency)
