@@ -98,7 +98,8 @@ def merge_sequential_recordings(recordings: Sequence[Recording], **kwargs):
 
 def is_sequential_recording(recording: Recording,
                             other: Recording,
-                            tol='auto'):
+                            tol='auto',
+                            abs_tol=False):
     """Check if recordings are compatible and sequential."""
     shared_series = {s.name for s in recording.ts} & {s.name for s in other.ts}
 
@@ -115,6 +116,10 @@ def is_sequential_recording(recording: Recording,
 
     recording_end_date = (recording.meta['date'] + recording.data.duration)
     time_diff = (other.meta['date'] - recording_end_date).total_seconds()
+
+    if abs_tol:
+        time_diff = abs(time_diff)
+
     if tol == 'auto':
         tol = 1 / recording.frequency
 
