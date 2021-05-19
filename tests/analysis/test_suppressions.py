@@ -165,3 +165,23 @@ def test_artifacts():
     analyzer = SuppressionAnalyzer(rec)
     detections = analyzer.detect_ies(threshold=5.5)
     assert len(detections) == 0
+
+
+def test_artifact_in_suppression():
+    rec = simulated_eeg_recording(channels=['EEG_1'], duration=10,
+                                  frequency=100)
+    rec = rec.filter(1)
+    # Add suppression
+    rec.data.iloc[200:600] /= rec.data.iloc[200:600].values.max() / 5
+
+    # Add artifact
+    artifacts = EventSeries(name='artifacts')
+    artifacts.add(3.2, 4.8, code='test')
+    rec.es.add(artifacts)
+    analyzer = SuppressionAnalyzer(rec)
+    detections = analyzer.detect_ies(threshold=5.5)
+    assert len(detections) == 2
+    # The suppressions must not overlap with the artifact
+    sec = pd.Timedelta('1s')
+    assert detections.loc[0].end < 3.2 * sec
+    assert detections.loc[1].end > 4.8 * sec
